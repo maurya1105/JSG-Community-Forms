@@ -1,0 +1,166 @@
+/* Overall Form Styling */
+.form-container {
+    font-family: Arial, sans-serif;
+    width: 60%;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #3f0986;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px #FACE1D;
+  }
+  
+  .header-section {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  
+  .header-section .logo {
+    width: 120px;
+    margin-bottom: 20px;
+  }
+
+  .header-details{
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+    color: #ffffff;
+  }
+
+  .header-details h1{
+    margin: 0px;
+  }
+
+  .header-details p{
+    margin: 0px;
+    font-size: large;
+  }
+
+  .header-details p a{
+    color: #ffffff;
+  }
+  
+  .form-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .scrolling-form {
+    overflow-y: auto;
+  }
+  
+  .form-section {
+    margin-bottom: 30px;
+  }
+  
+  h3 {
+    font-size: 20px;
+    color: #333;
+    margin-bottom: 10px;
+  }
+  
+  h5 {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 5px;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+  
+  input:focus {
+    border-color: #007bff;
+    outline: none;
+  }
+  
+  .error {
+    color: red;
+    font-size: 12px;
+    margin-top: 5px;
+  }
+  
+  .amount-display {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-top: 5px;
+  }
+  
+  .rates-info {
+    font-size: 14px;
+    margin-top: 10px;
+  }
+  
+  .rates-info ul {
+    list-style-type: none;
+    padding-left: 0;
+  }
+  
+  .rates-info li {
+    margin-bottom: 5px;
+  }
+  
+  .rates-section {
+    border: 1px solid #ccc;
+    padding: 15px;
+    border-radius: 4px;
+  }
+  
+  .rates-section legend {
+    font-weight: bold;
+    font-size: 16px;
+    color: #333;
+  }
+  
+  .form-actions {
+    text-align: center;
+    margin-top: 30px;
+  }
+  
+  .submit-button {
+    padding: 12px 20px;
+    background-color: #007bff;
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .submit-button:hover {
+    background-color: #0056b3;
+  }
+  
+  @media (max-width: 768px) {
+    .form-container {
+      width: 90%;
+    }
+  
+    .header-section .logo {
+      width: 100px;
+    }
+  
+    .form-title {
+      font-size: 20px;
+    }
+  
+    .form-group {
+      margin-bottom: 10px;
+    }
+  
+    .submit-button {
+      padding: 10px 18px;
+    }
+  }
+  
