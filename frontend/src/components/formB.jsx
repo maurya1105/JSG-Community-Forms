@@ -4,11 +4,12 @@ import logo from '../assets/JSG_logo.png';
 import "./formB.css";
 import { remoteUrl } from '../api.config';
 import axios from 'axios';
+import { useState } from "react";
 
 
 export default function App() {
   const { register, handleSubmit, formState: { errors } } = useForm();
-  
+  const [previews, setPreviews] = useState({}); // State for multiple previews
   // const onSubmit = data => {
   //   console.log('Form submitted with data:', data);
   //   alert("Form submitted successfully!");
@@ -60,6 +61,21 @@ export default function App() {
   const handleNumericInput = (e) => {
     // Allow only numeric input (prevent non-numeric characters)
     e.target.value = e.target.value.replace(/[^0-9]/g, '');
+  };
+
+  //Preview Image
+  const handleFileChange = (event, fieldName) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        setPreviews((prev) => ({
+          ...prev,
+          [fieldName]: reader.result, // Update preview for the specific field
+        }));
+      };
+    }
   };
 
   return (
@@ -293,9 +309,23 @@ export default function App() {
       {...register("presidentPhoto", {
 
       })} 
+      onChange={(e) => handleFileChange(e, "presidentPhoto")} // Unique field name
     />
     {errors.presidentPhoto && <span className="text-red-500 text-sm">{errors.presidentPhoto.message}</span>}
   </div>
+
+  {/* Image Preview for President */}
+  {previews.presidentPhoto && (
+            <div className="mt-3">
+              <p>Image Preview (President):</p>
+              <img
+                src={previews.presidentPhoto}
+                alt="President preview"
+                className="img-thumbnail"
+                style={{ maxWidth: "200px" }}
+              />
+            </div>
+          )}
 
   <div className="form-group">
     <h5>Correspondence Address</h5>
@@ -489,9 +519,23 @@ export default function App() {
       {...register("immediateFormerPresidentPhoto", {
 
       })} 
+      onChange={(e) => handleFileChange(e, "immediateFormerPresidentPhoto")} // Unique field name
     />
     {errors.immediateFormerPresidentPhoto && <span className="text-red-500 text-sm">{errors.immediateFormerPresidentPhoto.message}</span>}
   </div>
+
+    {/* Image Preview for Immediate Former President */}
+    {previews.immediateFormerPresidentPhoto && (
+            <div className="mt-3">
+              <p>Image Preview (Immediate Former President):</p>
+              <img
+                src={previews.immediateFormerPresidentPhoto}
+                alt="Secretary preview"
+                className="img-thumbnail"
+                style={{ maxWidth: "200px" }}
+              />
+            </div>
+          )}
 
   <div className="form-group">
     <h5>Correspondence Address</h5>
@@ -685,9 +729,22 @@ export default function App() {
       {...register("founderPresidentPhoto", {
 
       })} 
+      onChange={(e) => handleFileChange(e, "founderPresidentPhoto")} // Unique field name
     />
     {errors.founderPresidentPhoto && <span className="text-red-500 text-sm">{errors.founderPresidentPhoto.message}</span>}
   </div>
+  {/* Image Preview for Founder President */}
+  {previews.founderPresidentPhoto && (
+            <div className="mt-3">
+              <p>Image Preview (Founder President):</p>
+              <img
+                src={previews.founderPresidentPhoto}
+                alt="Founder President preview"
+                className="img-thumbnail"
+                style={{ maxWidth: "200px" }}
+              />
+            </div>
+          )}
 
   <div className="form-group">
     <h5>Correspondence Address</h5>
@@ -882,9 +939,22 @@ export default function App() {
       {...register("nominatedFormerPresident1Photo", {
 
       })} 
+      onChange={(e) => handleFileChange(e, "nominatedFormerPresident1Photo")} // Unique field name
     />
     {errors.nominatedFormerPresident1Photo && <span className="text-red-500 text-sm">{errors.nominatedFormerPresident1Photo.message}</span>}
   </div>
+  {/* Image Preview for Nominated Former President 1 */}
+  {previews.nominatedFormerPresident1Photo && (
+            <div className="mt-3">
+              <p>Image Preview (Nominated Former President 1):</p>
+              <img
+                src={previews.nominatedFormerPresident1Photo}
+                alt="Nominated Former President 1 preview"
+                className="img-thumbnail"
+                style={{ maxWidth: "200px" }}
+              />
+            </div>
+          )}
 
   <div className="form-group">
     <h5>Correspondence Address</h5>
@@ -1078,9 +1148,22 @@ export default function App() {
       {...register("nominatedFormerPresident2Photo", {
 
       })} 
+      onChange={(e) => handleFileChange(e, "nominatedFormerPresident2Photo")} // Unique field name
     />
     {errors.nominatedFormerPresident2Photo && <span className="text-red-500 text-sm">{errors.nominatedFormerPresident2Photo.message}</span>}
   </div>
+  {/* Image Preview for Nominated Former President 2 */}
+  {previews.nominatedFormerPresident2Photo && (
+            <div className="mt-3">
+              <p>Image Preview (Nominated Former President 2):</p>
+              <img
+                src={previews.nominatedFormerPresident2Photo}
+                alt="Nominated Former President 2 preview"
+                className="img-thumbnail"
+                style={{ maxWidth: "200px" }}
+              />
+            </div>
+          )}
 
   <div className="form-group">
     <h5>Correspondence Address</h5>
@@ -1275,9 +1358,22 @@ export default function App() {
       {...register("nominatedFormerPresident3Photo", {
 
       })} 
+      onChange={(e) => handleFileChange(e, "nominatedFormerPresident3Photo")} // Unique field name
     />
     {errors.nominatedFormerPresident3Photo && <span className="text-red-500 text-sm">{errors.nominatedFormerPresident3Photo.message}</span>}
   </div>
+  {/* Image Preview for Nominated Former President 3 */}
+  {previews.nominatedFormerPresident3Photo && (
+            <div className="mt-3">
+              <p>Image Preview (Nominated Former President 3):</p>
+              <img
+                src={previews.nominatedFormerPresident3Photo}
+                alt="Nominated Former President 3 preview"
+                className="img-thumbnail"
+                style={{ maxWidth: "200px" }}
+              />
+            </div>
+          )}
 
   <div className="form-group">
     <h5>Correspondence Address</h5>
@@ -1472,9 +1568,22 @@ export default function App() {
       {...register("vicePresidentPhoto", {
 
       })} 
+      onChange={(e) => handleFileChange(e, "vicePresidentPhoto")} // Unique field name
     />
     {errors.vicePresidentPhoto && <span className="text-red-500 text-sm">{errors.vicePresidentPhoto.message}</span>}
   </div>
+  {/* Image Preview for Vice President */}
+  {previews.vicePresidentPhoto && (
+            <div className="mt-3">
+              <p>Image Preview (Vice President):</p>
+              <img
+                src={previews.vicePresidentPhoto}
+                alt="Vice President preview"
+                className="img-thumbnail"
+                style={{ maxWidth: "200px" }}
+              />
+            </div>
+          )}
 
   <div className="form-group">
     <h5>Correspondence Address</h5>
@@ -1668,9 +1777,22 @@ export default function App() {
       {...register("secretaryPhoto", {
 
       })} 
+      onChange={(e) => handleFileChange(e, "secretaryPhoto")} // Unique field name
     />
     {errors.secretaryPhoto && <span className="text-red-500 text-sm">{errors.secretaryPhoto.message}</span>}
   </div>
+  {/* Image Preview for Secretary */}
+  {previews.secretaryPhoto && (
+            <div className="mt-3">
+              <p>Image Preview (Secretary):</p>
+              <img
+                src={previews.secretaryPhoto}
+                alt="Secretary preview"
+                className="img-thumbnail"
+                style={{ maxWidth: "200px" }}
+              />
+            </div>
+          )}
 
   <div className="form-group">
     <h5>Correspondence Address</h5>
@@ -1864,9 +1986,22 @@ export default function App() {
       {...register("jointSecretaryPhoto", {
 
       })} 
+      onChange={(e) => handleFileChange(e, "jointSecretaryPhoto")} // Unique field name
     />
     {errors.jointSecretaryPhoto && <span className="text-red-500 text-sm">{errors.jointSecretaryPhoto.message}</span>}
   </div>
+  {/* Image Preview for Joint Secretary */}
+  {previews.jointSecretaryPhoto && (
+            <div className="mt-3">
+              <p>Image Preview (Joint Secretary):</p>
+              <img
+                src={previews.jointSecretaryPhoto}
+                alt="Secretary preview"
+                className="img-thumbnail"
+                style={{ maxWidth: "200px" }}
+              />
+            </div>
+          )}
 
   <div className="form-group">
     <h5>Correspondence Address</h5>
@@ -2060,9 +2195,22 @@ export default function App() {
       {...register("treasurerPhoto", {
 
       })} 
+      onChange={(e) => handleFileChange(e, "treasurerPhoto")} // Unique field name
     />
     {errors.treasurerPhoto && <span className="text-red-500 text-sm">{errors.treasurerPhoto.message}</span>}
   </div>
+  {/* Image Preview for Treasurer */}
+  {previews.treasurerPhoto && (
+            <div className="mt-3">
+              <p>Image Preview (Treasurer):</p>
+              <img
+                src={previews.treasurerPhoto}
+                alt="Treasurer preview"
+                className="img-thumbnail"
+                style={{ maxWidth: "200px" }}
+              />
+            </div>
+          )}
 
   <div className="form-group">
     <h5>Correspondence Address</h5>

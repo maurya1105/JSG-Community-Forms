@@ -14,9 +14,9 @@ const Home = () => {
         <button onClick={() => navigate("/form-b")} style={styles.button}>
           Form B
         </button>
-        {/* <button onClick={() => navigate("/test")} style={styles.button}>
+        <button onClick={() => navigate("/test")} style={styles.button}>
           test
-        </button> */}
+        </button>
       </div>
     </div>
   );

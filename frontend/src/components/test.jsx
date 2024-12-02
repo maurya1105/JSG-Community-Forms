@@ -1,8 +1,10 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
+import { useState } from "react";
 
 export default function Test() {
   const { register, handleSubmit, formState: { errors } } = useForm();
+  const [previews, setPreviews] = useState({}); // State for multiple previews
   
   const onSubmit = data => {
     console.log('Form submitted with data:', data);
@@ -11,6 +13,20 @@ export default function Test() {
 
   const handleNumericInput = (e) => {
     e.target.value = e.target.value.replace(/[^0-9]/g, '');
+  };
+
+  const handleFileChange = (event, fieldName) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        setPreviews((prev) => ({
+          ...prev,
+          [fieldName]: reader.result, // Update preview for the specific field
+        }));
+      };
+    }
   };
 
   return (
@@ -140,10 +156,85 @@ export default function Test() {
               type="file" 
               {...register("presidentPhoto", {
                 required: "Photo is required"
-              })} 
+              })}
+              onChange={(e) => handleFileChange(e, "presidentPhoto")} // Unique field name
             />
             {errors.presidentPhoto && <span className="text-red-500">{errors.presidentPhoto.message}</span>}
           </div>
+
+          {/* Image Preview for President */}
+          {previews.presidentPhoto && (
+            <div className="mt-3">
+              <p>Image Preview (President):</p>
+              <img
+                src={previews.presidentPhoto}
+                alt="President preview"
+                className="img-thumbnail"
+                style={{ maxWidth: "200px" }}
+              />
+            </div>
+          )}
+
+          {/* Add similar validation for other president fields */}
+        </div>
+
+        {/* Secretary Section */}
+        <div className="form-section">
+          <h3>(2) Sectretary</h3>
+
+          <div className="form-group">
+            <h5>Membership No.</h5>
+            <input 
+              type="text" 
+              placeholder="Membership No." 
+              {...register("secretaryMembershipNo", {
+                required: "Membership Number is required",
+                pattern: {
+                  value: /^[0-9]*$/i,
+                  message: "Please enter only numbers"
+                }
+              })} 
+              onInput={handleNumericInput}
+            />
+            {errors.presidentMembershipNo && <span className="text-red-500">{errors.presidentMembershipNo.message}</span>}
+          </div>
+
+          <div className="form-group">
+            <h5>Name</h5>
+            <input 
+              type="text" 
+              placeholder="Name" 
+              {...register("secretaryName", {
+                required: "Name is required"
+              })} 
+            />
+            {errors.presidentName && <span className="text-red-500">{errors.presidentName.message}</span>}
+          </div>
+
+          <div className="form-group">
+            <h5>Photo</h5>
+            <input 
+              type="file" 
+              {...register("secretaryPhoto", {
+                required: "Photo is required"
+              })}
+              onChange={(e) => handleFileChange(e, "secretaryPhoto")} // Unique field name
+            />
+            {errors.presidentPhoto && <span className="text-red-500">{errors.presidentPhoto.message}</span>}
+          </div>
+
+            {/* Image Preview for Secretary */}
+          {previews.secretaryPhoto && (
+            <div className="mt-3">
+              <p>Image Preview (Secretary):</p>
+              <img
+                src={previews.secretaryPhoto}
+                alt="Secretary preview"
+                className="img-thumbnail"
+                style={{ maxWidth: "200px" }}
+              />
+            </div>
+          )}
 
           {/* Add similar validation for other president fields */}
         </div>
