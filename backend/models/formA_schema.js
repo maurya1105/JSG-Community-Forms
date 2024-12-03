@@ -35,7 +35,7 @@ const contributionSchema = new mongoose.Schema({
   },
   lessPaid: {
     type: String,
-    required: true
+    required: false
   },
   netPayable: {
     type: Number,
@@ -48,7 +48,7 @@ const contributionSchema = new mongoose.Schema({
   },
   previousDues: {
     type: String,
-    required: true
+    required: false
   },
   secretaryMobileNumber: {
     type: String,
