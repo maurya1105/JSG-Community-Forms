@@ -90,13 +90,6 @@
     margin-top: 5px;
   }
   
-  .amount-display {
-    font-size: 16px;
-    font-weight: bold;
-    color: #333;
-    margin-top: 5px;
-  }
-  
   .rates-info {
     font-size: 14px;
     margin-top: 10px;
@@ -161,6 +154,66 @@
   
     .submit-button {
       padding: 10px 18px;
+    }
+  }
+  
+
+  .form-section {
+    margin: 20px 0;
+  }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2 equal-width columns */
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  
+  .input-group, .amount-group, .text-group {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .input-group input {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .amount-group p {
+    font-size: 16px;
+    font-weight: bold;
+  }
+  
+  h5 {
+    margin: 5px 0;
+    font-weight: normal;
+  }
+  
+  .text-group h5 {
+    text-align: right;
+  }
+  
+  /* Media Queries for Responsiveness */
+  @media (max-width: 768px) {
+    .form-row {
+      grid-template-columns: 1fr; /* Stacks the columns on smaller screens */
+    }
+  
+    .input-group, .amount-group {
+      text-align: left;
+    }
+  
+    .amount-group p {
+      text-align: left;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .form-row {
+      gap: 15px; /* Reduced gap for smaller screens */
     }
   }
   

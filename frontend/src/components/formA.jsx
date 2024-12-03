@@ -39,7 +39,7 @@ export default function FormA() {
       const coupleContributionAmount =
         coupleMembers >= 50
           ? coupleBaseRate + Math.max(0, coupleMembers - 50) * additionalCoupleRate
-          : 0;
+          : coupleMembers < 50 ? 7500 : coupleMembers * 7500;;
 
       // GST on Couple Contribution
       const coupleGst = coupleContributionAmount * gstRate;
@@ -205,62 +205,122 @@ export default function FormA() {
         </div>
 
         {/* Contribution Payable */}
-          <div className="form-section">
-            <h3>Contribution Payable</h3>
+        <h3>Contribution Payable</h3>
 
-            {/* Number of Members */}
-            <div className="form-group">
-              <h5>Number of Couple Members</h5>
-              <input
-                type="number"
-                placeholder="Couple Members"
-                {...register("coupleMembers", { required: "Couple Members is required" })}
-              />
-            </div>
+{/* Number of Couple Members */}
+<div className="form-row">
+  <div className="input-group">
+    <h5>Number of Couple Members</h5>
+    <input
+      type="number"
+      placeholder="Couple Members"
+      {...register("coupleMembers", { required: "Couple Members is required" })}
+    />
+    {errors.coupleMembers && <span className="error">{errors.coupleMembers.message}</span>}
+  </div>
+  <div className="amount-group">
+    <h5>Couple Contribution</h5>
+    <p>₹{coupleContribution}</p>
+  </div>
+</div>
 
-            <div className="form-group">
-              <h5>Number of Single Members</h5>
-              <input
-                type="number"
-                placeholder="Single Members"
-                {...register("singleMembers", { required: "Single Members is required" })}
-              />
-            </div>
+{/* Number of Single Members */}
+<div className="form-row">
+  <div className="input-group">
+    <h5>Number of Single Members</h5>
+    <input
+      type="number"
+      placeholder="Single Members"
+      {...register("singleMembers", { required: "Single Members is required" })}
+    />
+    {errors.coupleMembers && <span className="error">{errors.coupleMembers.message}</span>}
+  </div>
+  <div className="amount-group">
+    <h5>Single Contribution</h5>
+    <p>₹{singleContribution}</p>
+  </div>
+</div>
 
-            {/* Previous Dues */}
-            <div className="form-group">
-              <h5>Previous Dues</h5>
-              <input
-                type="number"
-                placeholder="Previous Dues"
-                {...register("previousDues", { required: "Previous Dues is required" })}
-              />
-            </div>
+{/* Previous Dues */}
+<div className="form-row">
+  <div className="input-group">
+    <h5>Previous Dues</h5>
+    <input
+      type="number"
+      placeholder="Previous Dues"
+      {...register("previousDues")}
+    />
+  </div>
+  <div className="amount-group">
+    <h5>Previous Dues Amount</h5>
+    <p>₹{previousDues}</p>
+  </div>
+</div>
 
-            {/* Calculate and Display Results */}
-            <div className="amount-display">
-              <h5>Couple Contribution: ₹{coupleContribution}</h5>
-              <h5>Single Contribution: ₹{singleContribution}</h5>
-              <h5>Gross Total: ₹{grossTotal}</h5>
-              <h5>GST @ 18%: ₹{gstAmount}</h5>
-              <h5>Grand Total: ₹{grandTotal}</h5>
-            </div>
+{/* Gross Total */}
+<div className="form-row">
+  <div className="text-group">
+    <h5>Gross Total</h5>
+  </div>
+  <div className="amount-group">
+    <h5>₹{grossTotal}</h5>
+  </div>
+</div>
 
-            {/* Payments Section */}
-            <div className="form-group">
-              <h5>Less Paid / Credit with JSGIF</h5>
-              <input
-                type="number"
-                placeholder="Less Paid / Credit"
-                {...register("lessPaid")}
-              />
-            </div>
+{/* GST */}
+<div className="form-row">
+  <div className="text-group">
+    <h5>GST @ 18%</h5>
+  </div>
+  <div className="amount-group">
+    <h5>₹{gstAmount}</h5>
+  </div>
+</div>
 
-            {/* Net Payable */}
-            <div className="amount-display">
-              <h5>Net Payable: ₹{netPayable}</h5>
-            </div>
-          </div>
+{/* Grand Total */}
+<div className="form-row">
+  <div className="text-group">
+    <h5>Grand Total</h5>
+  </div>
+  <div className="amount-group">
+    <h5>₹{grandTotal}</h5>
+  </div>
+</div>
+
+{/* Less Paid / Credit with JSGIF */}
+<div className="form-row">
+  <div className="input-group">
+    <h5>Less Paid / Credit with JSGIF</h5>
+    <input
+      type="number"
+      placeholder="Less Paid / Credit"
+      {...register("lessPaid")}
+    />
+  </div>
+  <div className="amount-group">
+    <h5>Credit Amount</h5>
+    <p>₹{creditWithJSGIF}</p>
+  </div>
+  <div className="form-group">
+            <h5>Receipt No.</h5>
+            <input
+              type="text"
+              placeholder="Receipt No."
+              {...register("receiptNumber", { required: "Receipt Number is required" })}
+            />
+            {errors.receiptNumber && <span className="error">{errors.receiptNumber.message}</span>}
+    </div>
+</div>
+
+{/* Net Payable */}
+<div className="form-row">
+  <div className="text-group">
+    <h5>Net Payable</h5>
+  </div>
+  <div className="amount-group">
+    <h5>₹{netPayable}</h5>
+  </div>
+</div>
 
 
 
