@@ -2,6 +2,12 @@
 body {
     background-color: #3f0986;
   }
+
+  .error {
+    color: red;
+    font-size: 12px;
+    margin-top: 5px;
+  }
   
   /* Header section styling */
   .header-section {
@@ -220,4 +226,19 @@ body {
   background-color: #218838;
 }
 
+.print-div{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.print-btn{
+    background-color: #FACE1D;
+    color: 3f0986;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
   
