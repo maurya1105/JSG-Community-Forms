@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import "./formA.css";
 import logo from "../assets/JSG_logo.png";
@@ -7,6 +7,7 @@ import { remoteUrl } from "../api.config";
 
 export default function FormA() {
   const { register, handleSubmit, formState: { errors }, watch } = useForm();
+  const [isSubmitted, setIsSubmitted] = useState(false); // State to control PDF button visibility
 
   // Watch form inputs for real-time updates
   const coupleMembers = watch("coupleMembers"); // Number of Couple Members
@@ -96,9 +97,16 @@ export default function FormA() {
     })
 
     console.log(response)
-
+    setIsSubmitted(true); // Show the "Download as PDF" button
     alert("Form submitted successfully!");
   };
+
+   //PDF 
+   const componentRef = useRef();
+
+   const handlePrint = async () => {
+     window.print()
+   };
 
   return (
     <div className="form-container">
@@ -118,6 +126,7 @@ export default function FormA() {
       </div>
 
       {/* Form Section */}
+      <div ref={componentRef} style={{padding: "20px",background: "#3f0986", height:"auto"}}>
       <form onSubmit={handleSubmit(onSubmit)} className="scrolling-form">
         {/* Group Information */}
         <div className="form-section">
@@ -331,6 +340,18 @@ export default function FormA() {
           </button>
         </div>
       </form>
+      </div>
+      <div className="print-div">
+      {isSubmitted && (
+        <button
+          onClick={handlePrint}
+          className="print-btn"
+          style={{ marginTop: "20px" }}
+        >
+          Print
+        </button>
+      )}
+      </div>
     </div>
   );
 }
