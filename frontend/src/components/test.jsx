@@ -1,14 +1,38 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { useState } from "react";
+import { useRef } from "react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 export default function Test() {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [previews, setPreviews] = useState({}); // State for multiple previews
+  const [isSubmitted, setIsSubmitted] = useState(false); // State to control PDF button visibility
+  const formRef = useRef(); // Reference for the form content
+
+   // State for WhatsApp and Mobile Numbers
+   const [contactNumbers, setContactNumbers] = useState({
+    presidentWhatsapp: "",
+    presidentMobile: "",
+    secretaryWhatsapp: "",
+    secretaryMobile: "",
+  });
   
   const onSubmit = data => {
+      // Check if mobile field is blank, and assign WhatsApp value to it
+  if (!data.presidentMobile) {
+    data.presidentMobile = data.presidentWhatsapp; // Automatically assign WhatsApp to Mobile if blank
+  }
+
+  if (!data.secretaryMobile) {
+    data.secretaryMobile = data.secretaryWhatsapp; // Same for secretary
+  }
+  
     console.log('Form submitted with data:', data);
+    setIsSubmitted(true); // Show the "Download as PDF" button
     // You could also send this data to an API here
+    alert("Form submitted successfully!");
   };
 
   const handleNumericInput = (e) => {
@@ -28,6 +52,63 @@ export default function Test() {
       };
     }
   };
+  
+  const handlePrint = async () => {
+    const element = formRef.current;
+    if (element) {
+      // Capture the form as an image
+      const canvas = await html2canvas(element, {
+        scale: 2, // High resolution for better PDF quality
+        useCORS: true
+      });
+      const imgData = canvas.toDataURL("image/png");
+
+      // Create a PDF
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+
+      const ratio = canvasWidth / pdfWidth;
+      const totalPages = Math.ceil(canvasHeight / (pdfHeight * ratio));
+
+      for (let i = 0; i < totalPages; i++) {
+        if (i > 0) pdf.addPage();
+        pdf.addImage(
+          imgData,
+          "PNG",
+          0,
+          -i * pdfHeight,
+          pdfWidth,
+          pdfHeight
+        );
+      }
+      pdf.save("form.pdf");
+    }
+  };
+
+  const handleWhatsAppChange = (e, role) => {
+    const value = e.target.value.replace(/[^0-9]/g, ""); // Ensure only numeric input
+    
+    setContactNumbers((prev) => {
+      const isMobileBlank = !prev[`${role}Mobile`]; // Check if Mobile is empty
+      return {
+        ...prev,
+        [`${role}Whatsapp`]: value,
+        ...(isMobileBlank && { [`${role}Mobile`]: value }), // Copy WhatsApp to Mobile if it's blank
+      };
+    });
+  };
+
+  const handleMobileChange = (e, role) => {
+    const value = e.target.value.replace(/[^0-9]/g, ""); // Ensure only numbers
+    setContactNumbers((prev) => ({
+      ...prev,
+      [`${role}Mobile`]: value,
+    }));
+  };
 
   return (
     <div className="form-container">
@@ -42,7 +123,8 @@ export default function Test() {
       </div>
 
       {/* Form Section */}
-      <form onSubmit={handleSubmit(onSubmit)} className="scrolling-form">
+      <div ref={formRef}>
+        <form onSubmit={handleSubmit(onSubmit)} className="scrolling-form">
         {/* General Info Section */}
         <div className="form-section">
           <h3>General Info</h3>
@@ -175,6 +257,43 @@ export default function Test() {
             </div>
           )}
 
+          <div className="form-group">
+            <h5>Mobile</h5>
+            <input 
+              type="text" 
+              placeholder="Mobile" 
+              {...register("presidentMobile", {
+                pattern: {
+                  value: /^[0-9]*$/i,
+                  message: "Please enter only numbers"
+                }
+              })} 
+              value={contactNumbers.presidentMobile}
+              onChange={(e) => handleMobileChange(e, "president")}
+              onInput={handleNumericInput}
+            />
+            {errors.presidentMobile && <span className="text-red-500">{errors.presidentMobile.message}</span>}
+          </div>
+
+          <div className="form-group">
+            <h5>Whatsapp</h5>
+            <input 
+              type="text" 
+              placeholder="Whatsapp" 
+              {...register("presidentWhatsapp", {
+                required: "Whatsapp no. is required",
+                pattern: {
+                  value: /^[0-9]*$/i,
+                  message: "Please enter only numbers"
+                }
+              })} 
+              value={contactNumbers.presidentWhatsapp}
+              onChange={(e) => handleWhatsAppChange(e, "president")}
+              onInput={handleNumericInput}
+            />
+            {errors.presidentWhatsapp && <span className="text-red-500">{errors.presidentWhatsapp.message}</span>}
+          </div>
+
           {/* Add similar validation for other president fields */}
         </div>
 
@@ -236,6 +355,43 @@ export default function Test() {
             </div>
           )}
 
+          <div className="form-group">
+            <h5>Mobile</h5>
+            <input 
+              type="text" 
+              placeholder="Mobile" 
+              {...register("secretaryMobile", {
+                pattern: {
+                  value: /^[0-9]*$/i,
+                  message: "Please enter only numbers"
+                }
+              })} 
+              value={contactNumbers.secretaryMobile}
+              onChange={(e) => handleMobileChange(e, "secretary")}
+              onInput={handleNumericInput}
+            />
+            {errors.secretaryMobile && <span className="text-red-500">{errors.secretaryMobile.message}</span>}
+          </div>
+
+          <div className="form-group">
+            <h5>Whatsapp</h5>
+            <input 
+              type="text" 
+              placeholder="Whatsapp" 
+              {...register("secretaryWhatsapp", {
+                required: "Whatsapp no. is required",
+                pattern: {
+                  value: /^[0-9]*$/i,
+                  message: "Please enter only numbers"
+                }
+              })} 
+              value={contactNumbers.secretaryWhatsapp}
+              onChange={(e) => handleWhatsAppChange(e, "secretary")}
+              onInput={handleNumericInput}
+            />
+            {errors.secretaryWhatsapp && <span className="text-red-500">{errors.secretaryWhatsapp.message}</span>}
+          </div>
+
           {/* Add similar validation for other president fields */}
         </div>
 
@@ -249,7 +405,18 @@ export default function Test() {
         >
           Submit Form
         </button>
-      </form>
+        </form>
+      </div>
+      {/* Print Button (Visible after submission) */}
+      {isSubmitted && (
+        <button
+          onClick={handlePrint}
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4"
+          style={{ marginTop: "20px" }}
+        >
+          Download as PDF
+        </button>
+      )}
     </div>
   );
 }
