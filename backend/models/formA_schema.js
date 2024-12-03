@@ -71,6 +71,10 @@ const contributionSchema = new mongoose.Schema({
   submissionDate: {
     type: Date,
     default: Date.now
+  },
+  receiptNumber:{
+    type:String,
+    required:true
   }
 });
 
