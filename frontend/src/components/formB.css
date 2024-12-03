@@ -87,15 +87,16 @@ body {
     text-align: left;
   }
   
-  /* Grid layout for inputs, 3 columns */
+  /* Grid layout for inputs, 2 columns */
   .form-section .form-group {
     display: inline-block;
-    width: 45%; /* Ensures that the form groups are in three columns */
+    width: 45%; /* Ensures that the form groups are in two columns */
     margin-right: 20px;
+    box-sizing: border-box;
   }
   
-  .form-section .form-group:nth-child(3n) {
-    margin-right: 20; /* Removes margin on every third element */
+  .form-section .form-group:nth-child(2n) {
+    margin-right:2%; /* Removes margin on every second element */
   }
   
   /* Styling for input fields and textarea */
@@ -127,6 +128,18 @@ body {
     height: 100px;
     resize: vertical;
   }
+
+  /* Ensure the form-group for textarea spans the full row */
+.form-section .form-group.full-row {
+  display: block; /* Break inline-block for full-row textareas */
+  width: 100%; /* Full width */
+  margin-right: 0; /* Reset margin */
+}
+
+/* Specific styling for textarea in full-row */
+.form-section .form-group.full-row textarea {
+  width: 100%;
+}
   
   /* Styling for submit button */
   input[type="submit"] {

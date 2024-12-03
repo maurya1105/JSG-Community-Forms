@@ -192,9 +192,9 @@ export default function App() {
     {errors.groupNo && <span className="text-red-500 text-sm">{errors.groupNo.message}</span>}
   </div>
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Correspondence Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("address", {
@@ -327,9 +327,9 @@ export default function App() {
             </div>
           )}
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Correspondence Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("presidentAddress", {
@@ -537,9 +537,9 @@ export default function App() {
             </div>
           )}
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Correspondence Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("immediateFormerPresidentAddress", {
@@ -746,9 +746,9 @@ export default function App() {
             </div>
           )}
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Correspondence Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("founderPresidentAddress", {
@@ -956,9 +956,9 @@ export default function App() {
             </div>
           )}
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Correspondence Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("nominatedFormerPresident1Address", {
@@ -1165,9 +1165,9 @@ export default function App() {
             </div>
           )}
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Correspondence Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("nominatedFormerPresident2Address", {
@@ -1375,9 +1375,9 @@ export default function App() {
             </div>
           )}
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Correspondence Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("nominatedFormerPresident3Address", {
@@ -1585,9 +1585,9 @@ export default function App() {
             </div>
           )}
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Correspondence Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("vicePresidentAddress", {
@@ -1794,9 +1794,9 @@ export default function App() {
             </div>
           )}
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Correspondence Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("secretaryAddress", {
@@ -2003,9 +2003,9 @@ export default function App() {
             </div>
           )}
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Correspondence Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("jointSecretaryAddress", {
@@ -2212,9 +2212,9 @@ export default function App() {
             </div>
           )}
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Correspondence Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("treasurerAddress", {
@@ -2396,9 +2396,9 @@ export default function App() {
     {errors.committeemember1Name && <span className="text-red-500 text-sm">{errors.committeemember1Name.message}</span>}
   </div>
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("committeemember1Address", {
@@ -2492,9 +2492,9 @@ export default function App() {
     {errors.committeemember2Name && <span className="text-red-500 text-sm">{errors.committeemember2Name.message}</span>}
   </div>
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("committeemember2Address", {
@@ -2587,9 +2587,9 @@ export default function App() {
     {errors.committeemember3Name && <span className="text-red-500 text-sm">{errors.committeemember3Name.message}</span>}
   </div>
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("committeemember3Address", {
@@ -2682,9 +2682,9 @@ export default function App() {
     {errors.committeemember4Name && <span className="text-red-500 text-sm">{errors.committeemember4Name.message}</span>}
   </div>
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("committeemember4Address", {
@@ -2777,9 +2777,9 @@ export default function App() {
     {errors.committeemember5Name && <span className="text-red-500 text-sm">{errors.committeemember5Name.message}</span>}
   </div>
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("committeemember5Address", {
@@ -2872,9 +2872,9 @@ export default function App() {
     {errors.committeemember6Name && <span className="text-red-500 text-sm">{errors.committeemember6Name.message}</span>}
   </div>
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("committeemember6Address", {
@@ -2967,9 +2967,9 @@ export default function App() {
     {errors.committeemember7Name && <span className="text-red-500 text-sm">{errors.committeemember7Name.message}</span>}
   </div>
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("committeemember7Address", {
@@ -3062,9 +3062,9 @@ export default function App() {
     {errors.committeemember8Name && <span className="text-red-500 text-sm">{errors.committeemember8Name.message}</span>}
   </div>
 
-  <div className="form-group">
+  <div className="form-group full-row">
     <h5>Address</h5>
-    <input 
+    <textarea 
       type="text" 
       placeholder="Address" 
       {...register("committeemember8Address", {
