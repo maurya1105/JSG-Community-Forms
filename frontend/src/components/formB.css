@@ -1,141 +1,139 @@
 /* General form styling */
 body {
-    background-color: #3f0986;
-  }
+  background-color: #3f0986;
+}
 
-  .error {
-    color: red;
-    font-size: 12px;
-    margin-top: 5px;
-  }
-  
-  /* Header section styling */
-  .header-section {
-    text-align: center;
-    margin-bottom: 30px;
-  }
-  
-  .header-section .logo {
-    width: 100px; /* Adjust the logo size */
-    height: auto;
-    display: block;
-    margin: 0 auto;
-  }
+.error {
+  color: red;
+  font-size: 12px;
+  margin-top: 5px;
+}
 
-  .header-details{
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 0px;
-    color: #ffffff;
-  }
+/* Header section styling */
+.header-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
 
-  .header-details h1{
-    margin: 0px;
-  }
+.header-section .logo {
+  width: 100px; /* Adjust the logo size */
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
 
-  .header-details p{
-    margin: 0px;
-    font-size: large;
-  }
+.header-details {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  color: #ffffff;
+}
 
-  .header-details p a{
-    color: #ffffff;
-  }
-  
-  .header-section .form-title {
-    font-size: 28px;
-    color: #ffffff;
-    margin-top: 25px;
-    font-weight: bold;
-  }
-  
+.header-details h1 {
+  margin: 0px;
+}
 
+.header-details p {
+  margin: 0px;
+  font-size: large;
+}
 
-  form {
-    width: 80%;
-    margin: 50px auto;
-    padding: 20px;
-    border: 1px solid #FACE1D;
-    border-radius: 8px;
-    background-color: #FACE1D;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    overflow-y: auto;
-  }
-  
-  /* Section styling */
-  .form-section {
-    margin-bottom: 30px;
-  }
-  
-  h3 {
-    font-size: 22px;
-    color: #3f0986;
-    text-align: left;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #3f0986; /* Adds a line below the section heading */
-    padding-bottom: 10px;
-  }
-  
-  /* Styling for individual form groups (label and input pair) */
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    margin-bottom: 8px; /* Adds space after each form group */
-  }
-  
-  /* Styling for each label (h5) */
-  h5 {
-    font-size: 16px;
-    color: #3f0986;
-    margin-bottom: 5px;
-    text-align: left;
-  }
-  
-  /* Grid layout for inputs, 2 columns */
-  .form-section .form-group {
-    display: inline-block;
-    width: 45%; /* Ensures that the form groups are in two columns */
-    margin-right: 20px;
-    box-sizing: border-box;
-  }
-  
-  .form-section .form-group:nth-child(2n) {
-    margin-right:2%; /* Removes margin on every second element */
-  }
-  
-  /* Styling for input fields and textarea */
-  input[type="text"],
-  input[type="date"],
-  input[type="email"],
-  textarea {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
-    border: 1px solid #3f0986;
-    border-radius: 4px;
-    font-size: 14px;
-    box-sizing: border-box;
-  }
-  
-  /* Focus effect */
-  input[type="text"]:focus,
-  input[type="date"]:focus,
-  input[type="email"]:focus,
-  textarea:focus {
-    border-color: #007bff;
-    outline: none;
-    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
-  }
-  
-  /* Styling for textarea */
-  textarea {
-    height: 100px;
-    resize: vertical;
-  }
+.header-details p a {
+  color: #ffffff;
+}
 
-  /* Ensure the form-group for textarea spans the full row */
+.header-section .form-title {
+  font-size: 28px;
+  color: #ffffff;
+  margin-top: 25px;
+  font-weight: bold;
+}
+
+form {
+  width: 80%;
+  margin: 50px auto;
+  padding: 20px;
+  border: 1px solid #face1d;
+  border-radius: 8px;
+  background-color: #face1d;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+}
+
+/* Section styling */
+.form-section {
+  margin-bottom: 30px;
+}
+
+h3 {
+  font-size: 22px;
+  color: #3f0986;
+  text-align: left;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #3f0986; /* Adds a line below the section heading */
+  padding-bottom: 10px;
+}
+
+/* Styling for individual form groups (label and input pair) */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  margin-bottom: 8px; /* Adds space after each form group */
+}
+
+/* Styling for each label (h5) */
+h5 {
+  font-size: 16px;
+  color: #3f0986;
+  margin-bottom: 5px;
+  text-align: left;
+}
+
+/* Grid layout for inputs, 2 columns */
+.form-section .form-group {
+  display: inline-block;
+  width: 45%; /* Ensures that the form groups are in two columns */
+  margin-right: 20px;
+  box-sizing: border-box;
+}
+
+.form-section .form-group:nth-child(2n) {
+  margin-right: 2%; /* Removes margin on every second element */
+}
+
+/* Styling for input fields and textarea */
+input[type="text"],
+input[type="date"],
+input[type="email"],
+textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #3f0986;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+/* Focus effect */
+input[type="text"]:focus,
+input[type="date"]:focus,
+input[type="email"]:focus,
+textarea:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* Styling for textarea */
+textarea {
+  height: 100px;
+  resize: vertical;
+}
+
+/* Ensure the form-group for textarea spans the full row */
 .form-section .form-group.full-row {
   display: block; /* Break inline-block for full-row textareas */
   width: 100%; /* Full width */
@@ -146,9 +144,9 @@ body {
 .form-section .form-group.full-row textarea {
   width: 100%;
 }
-  
-  /* Styling for submit button */
-  /* input[type="submit"] {
+
+/* Styling for submit button */
+/* input[type="submit"] {
     background-color: #3f0986;
     color: white;
     border: none;
@@ -163,40 +161,38 @@ body {
     background-color: #3f0986;
   } */
 
-  .submit-button {
-    background-color: #3f0986;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.3s;
-  }
-  
-  .submit-button:hover {
-    background-color: #0056b3;
-  }
-  
-  /* Error handling */
-  input:invalid {
-    border-color: #dc3545;
-  }
-  
-  input:invalid:focus {
-    box-shadow: 0 0 5px rgba(220, 53, 69, 0.5);
-  }
-  
-  /* Responsive design: stack columns on smaller screens */
-  @media (max-width: 768px) {
-    .form-section .form-group {
-      width: 100%; /* Stack into a single column */
-    }
-  }
+.submit-button {
+  background-color: #3f0986;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
 
+.submit-button:hover {
+  background-color: #0056b3;
+}
 
+/* Error handling */
+input:invalid {
+  border-color: #dc3545;
+}
 
-  /* Submitting Overlay */
+input:invalid:focus {
+  box-shadow: 0 0 5px rgba(220, 53, 69, 0.5);
+}
+
+/* Responsive design: stack columns on smaller screens */
+@media (max-width: 768px) {
+  .form-section .form-group {
+    width: 100%; /* Stack into a single column */
+  }
+}
+
+/* Submitting Overlay */
 .overlay {
   position: fixed;
   top: 0;
@@ -241,20 +237,20 @@ body {
   background-color: #218838;
 }
 
-.print-div{
+.print-div {
   display: flex;
   justify-content: center;
   align-items: center;
 }
-.print-btn{
-    background-color: #FACE1D;
-    color: 3f0986;
-    border: none;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.3s;
+.print-btn {
+  background-color: #face1d;
+  color: 3f0986;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s;
 }
 
 .spinner-container {
@@ -266,7 +262,7 @@ body {
 
 .spinner {
   border: 4px solid rgba(0, 0, 0, 0.1);
-  border-left-color: #FACE1D;
+  border-left-color: #face1d;
   border-radius: 50%;
   width: 36px;
   height: 36px;
