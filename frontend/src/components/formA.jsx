@@ -8,6 +8,7 @@ import { remoteUrl } from "../api.config";
 export default function FormA() {
   const { register, handleSubmit, formState: { errors }, watch } = useForm();
   const [isSubmitted, setIsSubmitted] = useState(false); // State to control PDF button visibility
+  const [isSubmitting, setIsSubmitting] = useState(false); // State for showing spinner
 
   // Watch form inputs for real-time updates
   const coupleMembers = watch("coupleMembers"); // Number of Couple Members
@@ -96,8 +97,14 @@ export default function FormA() {
       netPayable,
     })
 
+    setIsSubmitting(true); // Show the spinner
     console.log(response)
+
+    // Simulate an API call delay
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
     setIsSubmitted(true); // Show the "Download as PDF" button
+    setIsSubmitting(false); // Hide the spinner
     alert("Form submitted successfully!");
   };
 
@@ -335,12 +342,17 @@ export default function FormA() {
 
         {/* Action Buttons */}
         <div className="form-actions">
-          <button type="submit" className="submit-button">
-            Submit Form
+          <button type="submit" className="submit-button" disabled={isSubmitting}>
+          {isSubmitting ? "Submitting..." : "Submit Form"}
           </button>
         </div>
       </form>
       </div>
+      {isSubmitting && (
+        <div className="spinner-container">
+          <div className="spinner"></div>
+        </div>
+      )}
       <div className="print-div">
       {isSubmitted && (
         <button

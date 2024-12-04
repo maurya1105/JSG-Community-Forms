@@ -10,6 +10,7 @@ export default function App() {
   const { register, handleSubmit, watch, setValue,  formState: { errors } } = useForm();
   const [previews, setPreviews] = useState({}); // State for multiple previews
   const [isSubmitted, setIsSubmitted] = useState(false); // State to control PDF button visibility
+  const [isSubmitting, setIsSubmitting] = useState(false); // State for showing spinner
   const [isMobileUpdated, setIsMobileUpdated] = useState(false);
   // const onSubmit = data => {
   //   console.log('Form submitted with data:', data);
@@ -138,9 +139,12 @@ export default function App() {
         },
       });
   
+      setIsSubmitting(true); // Show the spinner
       console.log('Response:', response.data);
+      
       alert('Form submitted successfully!');
       setIsSubmitted(true); // Show the "Download as PDF" button
+      setIsSubmitting(false); // Hide the spinner
     } catch (error) {
       console.error('Error submitting form:', error);
       alert('Failed to submit the form. Please try again.');
@@ -3293,9 +3297,18 @@ export default function App() {
 
 
       {/* Submit Button */}
-      <input type="submit" />
+      <div className="form-actions">
+          <button type="submit" className="submit-button" disabled={isSubmitting}>
+          {isSubmitting ? "Submitting..." : "Submit Form"}
+          </button>
+        </div>
       </form>
       </div> 
+      {isSubmitting && (
+        <div className="spinner-container">
+          <div className="spinner"></div>
+        </div>
+      )}
       {/* Print Button (Visible after submission) */}
       <div className="print-div">
       {isSubmitted && (

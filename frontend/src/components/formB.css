@@ -148,7 +148,7 @@ body {
 }
   
   /* Styling for submit button */
-  input[type="submit"] {
+  /* input[type="submit"] {
     background-color: #3f0986;
     color: white;
     border: none;
@@ -161,6 +161,21 @@ body {
   
   input[type="submit"]:hover {
     background-color: #3f0986;
+  } */
+
+  .submit-button {
+    background-color: #3f0986;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+  }
+  
+  .submit-button:hover {
+    background-color: #0056b3;
   }
   
   /* Error handling */
@@ -241,4 +256,25 @@ body {
     border-radius: 4px;
     transition: background-color 0.3s;
 }
-  
+
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #FACE1D;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
