@@ -15,6 +15,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+});
+
 // Configure multer for handling multipart/form-data
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -86,7 +91,6 @@ app.get('/api/groups/:groupNo', async (req, res) => {
       data: group
     });
   } catch (error) {
-    console.error('Error fetching group:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch group',
