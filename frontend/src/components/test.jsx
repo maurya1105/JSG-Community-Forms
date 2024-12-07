@@ -1,6 +1,6 @@
 import React from "react";
 import { useForm } from "react-hook-form";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRef } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -31,38 +31,71 @@ export default function Test() {
     region: "",
   });
 
-  // Fetch group details based on groupNo
+  // Fetches group details from the API based on provided group number
+  // Makes a GET request to /api/groups/{groupNo} endpoint
+  // Updates groupDetails state with the response data
   const fetchGroupDetails = async (groupNo) => {
     try {
-      const response = await fetch(`/api/groups/${groupNo}`);
-      const data = await response.json();
+      const response = await fetch(
+        `http://localhost:5000/api/groups/${groupNo}`
+      );
+      const result = await response.json();
 
-      if (response.ok) {
+      if (response.ok && result.success) {
+        // If request successful, update state with group name and region
         setGroupDetails({
-          groupName: data.groupName || "",
-          region: data.region || "",
+          groupName: result.data.groupName || "",
+          region: result.data.region || "",
         });
       } else {
+        // Reset state if request fails
         setGroupDetails({
           groupName: "",
           region: "",
         });
-        console.error("Group not found or error fetching data");
       }
     } catch (error) {
       console.error("Error fetching group details:", error);
     }
   };
 
-  // Trigger fetchGroupDetails when groupNo changes
-  useEffect(() => {
-    if (groupNo) {
-      fetchGroupDetails(groupNo);
-    } else {
-      // Clear details if groupNo is empty
-      setGroupDetails({ groupName: "", region: "" });
-    }
-  }, [groupNo]);
+  // Debounce utility function to limit rate of function calls
+  // Returns a new function that will only execute after wait time has elapsed
+  // Useful for preventing too many API calls
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  // Memoized debounced version of fetchGroupDetails
+  // Only makes API call after 500ms of no new input
+  // Prevents API spam when user is typing
+  const debouncedFetch = useCallback(
+    debounce((value) => {
+      if (value) {
+        fetchGroupDetails(value);
+      } else {
+        // Reset group details if value is empty
+        setGroupDetails({ groupName: "", region: "" });
+      }
+    }, 500),
+    []
+  );
+
+  // Handler for group number input changes
+  // Strips non-numeric characters and triggers debounced API fetch
+  const handleGroupNoChange = (e) => {
+    const value = e.target.value.replace(/[^0-9]/g, ""); // Remove non-numeric chars
+    setGroupNo(value);
+    debouncedFetch(value);
+  };
 
   const onSubmit = async (data) => {
     if (!data.presidentMobile) {
@@ -220,11 +253,15 @@ export default function Test() {
               <input
                 type="text"
                 value={groupNo}
-                placeholder="Group No"
+                placeholder="Enter group number"
                 {...register("groupNo", {
                   required: "Group No is required",
+                  pattern: {
+                    value: /^[0-9]*$/,
+                    message: "Please enter only numbers",
+                  },
                 })}
-                onChange={(e) => setGroupNo(e.target.value)} // Update state on change
+                onChange={handleGroupNoChange}
               />
               {errors.groupNo && (
                 <span className="text-red-500">{errors.groupNo.message}</span>

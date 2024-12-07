@@ -4,7 +4,7 @@ import logo from "../assets/JSG_logo.png";
 import "./formB.css";
 import { remoteUrl } from "../api.config";
 import axios from "axios";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 export default function App() {
   const {
@@ -31,34 +31,41 @@ export default function App() {
   const immediateFormerPresidentWhatsapp = watch(
     "immediateFormerPresidentWhatsapp"
   ); // Watch the value of immediateFormerPresidentWhatsapp
-  const founderPresidentMobile = watch("founderPresidentMobile");
-  const founderPresidentWhatsapp = watch("founderPresidentWhatsapp");
+  const founderPresidentMobile = watch("founderPresidentMobile"); // Watch the value of founderPresidentMobile
+  const founderPresidentWhatsapp = watch("founderPresidentWhatsapp"); // Watch the value of founderPresidentWhatsapp
   const nominatedFormerPresident1Mobile = watch(
     "nominatedFormerPresident1Mobile"
-  ); // Watch the value of presidentMobile
+  ); // Watch the value of nominatedFormerPresident1Mobile
   const nominatedFormerPresident1Whatsapp = watch(
     "nominatedFormerPresident1Whatsapp"
-  ); // Watch the value of presidentWhatsapp
+  ); // Watch the value of nominatedFormerPresident1Whatsapp
   const nominatedFormerPresident2Mobile = watch(
     "nominatedFormerPresident2Mobile"
-  ); // Watch the value of presidentMobile
+  ); // Watch the value of nominatedFormerPresident2Mobile
   const nominatedFormerPresident2Whatsapp = watch(
     "nominatedFormerPresident2Whatsapp"
-  ); // Watch the value of presidentWhatsapp
+  ); // Watch the value of nominatedFormerPresident2Whatsapp
   const nominatedFormerPresident3Mobile = watch(
     "nominatedFormerPresident3Mobile"
-  ); // Watch the value of presidentMobile
+  ); // Watch the value of nominatedFormerPresident3Mobile
   const nominatedFormerPresident3Whatsapp = watch(
     "nominatedFormerPresident3Whatsapp"
-  ); // Watch the value of presidentWhatsapp
-  const vicePresidentMobile = watch("vicePresidentMobile"); // Watch the value of presidentMobile
-  const vicePresidentWhatsapp = watch("vicePresidentWhatsapp"); // Watch the value of presidentWhatsapp
-  const secretaryMobile = watch("secretaryMobile"); // Watch the value of presidentMobile
-  const secretaryWhatsapp = watch("secretaryWhatsapp"); // Watch the value of presidentWhatsapp
-  const jointSecretaryMobile = watch("jointSecretaryMobile"); // Watch the value of presidentMobile
-  const jointSecretaryWhatsapp = watch("jointSecretaryWhatsapp"); // Watch the value of presidentWhatsapp
-  const treasurerMobile = watch("treasurerMobile"); // Watch the value of presidentMobile
-  const treasurerWhatsapp = watch("treasurerWhatsapp"); // Watch the value of presidentWhatsapp
+  ); // Watch the value of nominatedFormerPresident3Whatsapp
+  const vicePresidentMobile = watch("vicePresidentMobile"); // Watch the value of vicePresidentMobile
+  const vicePresidentWhatsapp = watch("vicePresidentWhatsapp"); // Watch the value of vicePresidentWhatsapp
+  const secretaryMobile = watch("secretaryMobile"); // Watch the value of secretaryMobile
+  const secretaryWhatsapp = watch("secretaryWhatsapp"); // Watch the value of secretaryWhatsapp
+  const jointSecretaryMobile = watch("jointSecretaryMobile"); // Watch the value of jointSecretaryMobile
+  const jointSecretaryWhatsapp = watch("jointSecretaryWhatsapp"); // Watch the value of jointSecretaryWhatsapp
+  const treasurerMobile = watch("treasurerMobile"); // Watch the value of treasurerMobile
+  const treasurerWhatsapp = watch("treasurerWhatsapp"); // Watch the value of treasurerWhatsapp
+
+  //For AutoFilling
+  const [groupNo, setGroupNo] = useState(""); // For tracking the group number input
+  const [groupDetails, setGroupDetails] = useState({
+    groupName: "",
+    region: "",
+  });
 
   useEffect(() => {
     // Check if presidentMobile is empty and presidentWhatsapp is a valid phone number
@@ -320,6 +327,70 @@ export default function App() {
     window.print();
   };
 
+  // Fetches group details from the API based on provided group number
+  // Makes a GET request to /api/groups/{groupNo} endpoint
+  // Updates groupDetails state with the response data
+  const fetchGroupDetails = async (groupNo) => {
+    try {
+      const response = await fetch(`${remoteUrl}/api/groups/${groupNo}`);
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // If request successful, update state with group name and region
+        setGroupDetails({
+          groupName: result.data.groupName || "",
+          region: result.data.region || "",
+        });
+      } else {
+        // Reset state if request fails
+        setGroupDetails({
+          groupName: "",
+          region: "",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching group details:", error);
+    }
+  };
+
+  // Debounce utility function to limit rate of function calls
+  // Returns a new function that will only execute after wait time has elapsed
+  // Useful for preventing too many API calls
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  // Memoized debounced version of fetchGroupDetails
+  // Only makes API call after 500ms of no new input
+  // Prevents API spam when user is typing
+  const debouncedFetch = useCallback(
+    debounce((value) => {
+      if (value) {
+        fetchGroupDetails(value);
+      } else {
+        // Reset group details if value is empty
+        setGroupDetails({ groupName: "", region: "" });
+      }
+    }, 500),
+    []
+  );
+
+  // Handler for group number input changes
+  // Strips non-numeric characters and triggers debounced API fetch
+  const handleGroupNoChange = (e) => {
+    const value = e.target.value.replace(/[^0-9]/g, ""); // Remove non-numeric chars
+    setGroupNo(value);
+    debouncedFetch(value);
+  };
+
   return (
     <div className="form-container">
       {/* Header Section */}
@@ -380,6 +451,7 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Region"
+                value={groupDetails.region}
                 {...register("region", {})}
               />
               {errors.region && (
@@ -418,6 +490,7 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Name of Sponsoring Group"
+                value={groupDetails.groupName}
                 {...register("sponsoringGroup", {})}
               />
               {errors.sponsoringGroup && (
@@ -442,6 +515,7 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Group No."
+                value={groupNo}
                 {...register("groupNo", {
                   pattern: {
                     value: /^[0-9]*$/i,
@@ -449,6 +523,7 @@ export default function App() {
                   },
                 })}
                 onInput={handleNumericInput}
+                onChange={handleGroupNoChange}
               />
               {errors.groupNo && (
                 <span className="error">{errors.groupNo.message}</span>
@@ -540,7 +615,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -696,33 +771,6 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("presidentMobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                })}
-                onInput={handleNumericInput}
-                onChange={handlePresidentMobile}
-              />
-              {errors.presidentMobile && (
-                <span className="error">{errors.presidentMobile.message}</span>
-              )}
-            </div>
-
-            <div className="form-group">
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -751,7 +799,34 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>Mobile No.</h5>
+              <input
+                type="text"
+                placeholder="Mobile"
+                {...register("presidentMobile", {
+                  pattern: {
+                    value: /^[0-9]*$/i,
+                    message: "Please enter only numbers",
+                  },
+                  minLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                  maxLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                })}
+                onInput={handleNumericInput}
+                onChange={handlePresidentMobile}
+              />
+              {errors.presidentMobile && (
+                <span className="error">{errors.presidentMobile.message}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -983,35 +1058,6 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("immediateFormerPresidentMobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                })}
-                onInput={handleNumericInput}
-                onChange={handleImmediateFormerPresidentMobile}
-              />
-              {errors.immediateFormerPresidentMobile && (
-                <span className="error">
-                  {errors.immediateFormerPresidentMobile.message}
-                </span>
-              )}
-            </div>
-
-            <div className="form-group">
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -1040,7 +1086,36 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>Mobile No.</h5>
+              <input
+                type="text"
+                placeholder="Mobile"
+                {...register("immediateFormerPresidentMobile", {
+                  pattern: {
+                    value: /^[0-9]*$/i,
+                    message: "Please enter only numbers",
+                  },
+                  minLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                  maxLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                })}
+                onInput={handleNumericInput}
+                onChange={handleImmediateFormerPresidentMobile}
+              />
+              {errors.immediateFormerPresidentMobile && (
+                <span className="error">
+                  {errors.immediateFormerPresidentMobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -1271,6 +1346,34 @@ export default function App() {
             </div>
 
             <div className="form-group">
+              <h5>Whatsapp No.</h5>
+              <input
+                type="text"
+                placeholder="Whatsapp No."
+                {...register("founderPresidentWhatsapp", {
+                  pattern: {
+                    value: /^[0-9]*$/i,
+                    message: "Please enter only numbers",
+                  },
+                  minLength: {
+                    value: 10,
+                    message: "WhatsApp number must be 10 digits",
+                  },
+                  maxLength: {
+                    value: 10,
+                    message: "WhatsApp number must be 10 digits",
+                  },
+                })}
+                onInput={handleNumericInput}
+              />
+              {errors.founderPresidentWhatsapp && (
+                <span className="error">
+                  {errors.founderPresidentWhatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className="form-group">
               <h5>Mobile</h5>
               <input
                 type="text"
@@ -1300,35 +1403,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Whatsapp No.</h5>
-              <input
-                type="text"
-                placeholder="Whatsapp No."
-                {...register("founderPresidentWhatsapp", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
-                })}
-                onInput={handleNumericInput}
-              />
-              {errors.founderPresidentWhatsapp && (
-                <span className="error">
-                  {errors.founderPresidentWhatsapp.message}
-                </span>
-              )}
-            </div>
-
-            <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -1561,35 +1636,6 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("nominatedFormerPresident1Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                })}
-                onInput={handleNumericInput}
-                onChange={handleNominatedFormerPresident1Mobile}
-              />
-              {errors.nominatedFormerPresident1Mobile && (
-                <span className="error">
-                  {errors.nominatedFormerPresident1Mobile.message}
-                </span>
-              )}
-            </div>
-
-            <div className="form-group">
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -1618,7 +1664,36 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>Mobile No.</h5>
+              <input
+                type="text"
+                placeholder="Mobile"
+                {...register("nominatedFormerPresident1Mobile", {
+                  pattern: {
+                    value: /^[0-9]*$/i,
+                    message: "Please enter only numbers",
+                  },
+                  minLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                  maxLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                })}
+                onInput={handleNumericInput}
+                onChange={handleNominatedFormerPresident1Mobile}
+              />
+              {errors.nominatedFormerPresident1Mobile && (
+                <span className="error">
+                  {errors.nominatedFormerPresident1Mobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -1851,35 +1926,6 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("nominatedFormerPresident2Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                })}
-                onInput={handleNumericInput}
-                onChange={handleNominatedFormerPresident2Mobile}
-              />
-              {errors.nominatedFormerPresident2Mobile && (
-                <span className="error">
-                  {errors.nominatedFormerPresident2Mobile.message}
-                </span>
-              )}
-            </div>
-
-            <div className="form-group">
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -1908,7 +1954,36 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>Mobile No.</h5>
+              <input
+                type="text"
+                placeholder="Mobile"
+                {...register("nominatedFormerPresident2Mobile", {
+                  pattern: {
+                    value: /^[0-9]*$/i,
+                    message: "Please enter only numbers",
+                  },
+                  minLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                  maxLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                })}
+                onInput={handleNumericInput}
+                onChange={handleNominatedFormerPresident2Mobile}
+              />
+              {errors.nominatedFormerPresident2Mobile && (
+                <span className="error">
+                  {errors.nominatedFormerPresident2Mobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -2141,35 +2216,6 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("nominatedFormerPresident3Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                })}
-                onInput={handleNumericInput}
-                onChange={handleNominatedFormerPresident3Mobile}
-              />
-              {errors.nominatedFormerPresident3Mobile && (
-                <span className="error">
-                  {errors.nominatedFormerPresident3Mobile.message}
-                </span>
-              )}
-            </div>
-
-            <div className="form-group">
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -2198,7 +2244,36 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>Mobile No.</h5>
+              <input
+                type="text"
+                placeholder="Mobile"
+                {...register("nominatedFormerPresident3Mobile", {
+                  pattern: {
+                    value: /^[0-9]*$/i,
+                    message: "Please enter only numbers",
+                  },
+                  minLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                  maxLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                })}
+                onInput={handleNumericInput}
+                onChange={handleNominatedFormerPresident3Mobile}
+              />
+              {errors.nominatedFormerPresident3Mobile && (
+                <span className="error">
+                  {errors.nominatedFormerPresident3Mobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -2429,35 +2504,6 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("vicePresidentMobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                })}
-                onInput={handleNumericInput}
-                onChange={handleVicePresidentMobile}
-              />
-              {errors.vicePresidentMobile && (
-                <span className="error">
-                  {errors.vicePresidentMobile.message}
-                </span>
-              )}
-            </div>
-
-            <div className="form-group">
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -2486,7 +2532,36 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>Mobile No.</h5>
+              <input
+                type="text"
+                placeholder="Mobile"
+                {...register("vicePresidentMobile", {
+                  pattern: {
+                    value: /^[0-9]*$/i,
+                    message: "Please enter only numbers",
+                  },
+                  minLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                  maxLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                })}
+                onInput={handleNumericInput}
+                onChange={handleVicePresidentMobile}
+              />
+              {errors.vicePresidentMobile && (
+                <span className="error">
+                  {errors.vicePresidentMobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -2707,33 +2782,6 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("secretaryMobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                })}
-                onInput={handleNumericInput}
-                onChange={handleSecretaryMobile}
-              />
-              {errors.secretaryMobile && (
-                <span className="error">{errors.secretaryMobile.message}</span>
-              )}
-            </div>
-
-            <div className="form-group">
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -2762,7 +2810,34 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>Mobile No.</h5>
+              <input
+                type="text"
+                placeholder="Mobile"
+                {...register("secretaryMobile", {
+                  pattern: {
+                    value: /^[0-9]*$/i,
+                    message: "Please enter only numbers",
+                  },
+                  minLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                  maxLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                })}
+                onInput={handleNumericInput}
+                onChange={handleSecretaryMobile}
+              />
+              {errors.secretaryMobile && (
+                <span className="error">{errors.secretaryMobile.message}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -2991,35 +3066,6 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("jointSecretaryMobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                })}
-                onInput={handleNumericInput}
-                onChange={handleJointSecretaryMobile}
-              />
-              {errors.jointSecretaryMobile && (
-                <span className="error">
-                  {errors.jointSecretaryMobile.message}
-                </span>
-              )}
-            </div>
-
-            <div className="form-group">
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -3048,7 +3094,36 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>Mobile No.</h5>
+              <input
+                type="text"
+                placeholder="Mobile"
+                {...register("jointSecretaryMobile", {
+                  pattern: {
+                    value: /^[0-9]*$/i,
+                    message: "Please enter only numbers",
+                  },
+                  minLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                  maxLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                })}
+                onInput={handleNumericInput}
+                onChange={handleJointSecretaryMobile}
+              />
+              {errors.jointSecretaryMobile && (
+                <span className="error">
+                  {errors.jointSecretaryMobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -3269,33 +3344,6 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("treasurerMobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                })}
-                onInput={handleNumericInput}
-                onChange={handleTreasurerMobile}
-              />
-              {errors.treasurerMobile && (
-                <span className="error">{errors.treasurerMobile.message}</span>
-              )}
-            </div>
-
-            <div className="form-group">
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -3324,7 +3372,34 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>Mobile No.</h5>
+              <input
+                type="text"
+                placeholder="Mobile"
+                {...register("treasurerMobile", {
+                  pattern: {
+                    value: /^[0-9]*$/i,
+                    message: "Please enter only numbers",
+                  },
+                  minLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                  maxLength: {
+                    value: 10,
+                    message: "Mobile number must be 10 digits",
+                  },
+                })}
+                onInput={handleNumericInput}
+                onChange={handleTreasurerMobile}
+              />
+              {errors.treasurerMobile && (
+                <span className="error">{errors.treasurerMobile.message}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -3526,7 +3601,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
+              <h5>Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
@@ -3554,7 +3629,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -3666,7 +3741,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
+              <h5>Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
@@ -3694,7 +3769,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -3806,7 +3881,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
+              <h5>Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
@@ -3834,7 +3909,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -3946,7 +4021,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
+              <h5>Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
@@ -3974,7 +4049,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -4086,7 +4161,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
+              <h5>Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
@@ -4114,7 +4189,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>E-MailI ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -4226,7 +4301,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
+              <h5>Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
@@ -4254,7 +4329,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -4366,7 +4441,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
+              <h5>Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
@@ -4394,7 +4469,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
@@ -4506,7 +4581,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>Mobile</h5>
+              <h5>Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
@@ -4534,7 +4609,7 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <h5>E-Mail</h5>
+              <h5>E-Mail ID</h5>
               <input
                 type="email"
                 placeholder="E-Mail"
