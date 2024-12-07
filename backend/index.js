@@ -54,8 +54,46 @@ mongoose.connect(process.env.MONGODB_URI)
   });
 
 // Import models
-const Contribution = require('./models/formA_schema');
-const Forum = require('./models/formB_schema'); // Import the Forum model
+const Contribution = require('./models/formA_schema'); // Import the formA model
+const Forum = require('./models/formB_schema'); // Import the formB model
+const Group = require('./models/group_schema'); // Import the Group model
+
+// Endpoint to fetch all groups (if needed)
+app.get('/api/groups', async (req, res) => {
+  try {
+    const groups = await Group.find();  // Fetch all groups
+    res.status(200).json({ success: true, data: groups });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch groups', error: error.message });
+  }
+});
+
+// GET endpoint to fetch group details by group number
+app.get('/api/groups/:groupNo', async (req, res) => {
+  try {
+    const groupNo = parseInt(req.params.groupNo, 10);
+    const group = await Group.findOne({ groupNo });
+
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: group
+    });
+  } catch (error) {
+    console.error('Error fetching group:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch group',
+      error: error.message
+    });
+  }
+});
 
 // POST endpoint to save contribution data (Form A)
 app.post('/api/contributions', async (req, res) => {
