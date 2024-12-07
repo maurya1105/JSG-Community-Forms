@@ -32,18 +32,22 @@ export default function Test() {
     region: "",
   });
 
-  // Fetch group details based on groupNo
+  // Fetches group details from the API based on provided group number
+  // Makes a GET request to /api/groups/{groupNo} endpoint
+  // Updates groupDetails state with the response data
   const fetchGroupDetails = async (groupNo) => {
     try {
       const response = await fetch(`http://localhost:5000/api/groups/${groupNo}`);
       const result = await response.json();
 
       if (response.ok && result.success) {
+        // If request successful, update state with group name and region
         setGroupDetails({
           groupName: result.data.groupName || "",
-          region: result.data.region || "",
+          region: result.data.region || "", 
         });
       } else {
+        // Reset state if request fails
         setGroupDetails({
           groupName: "",
           region: "",
@@ -54,31 +58,40 @@ export default function Test() {
     }
   };
 
+  // Debounce utility function to limit rate of function calls
+  // Returns a new function that will only execute after wait time has elapsed
+  // Useful for preventing too many API calls
   function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
       clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
+      timeout = setTimeout(later, wait);
     };
   }
 
+  // Memoized debounced version of fetchGroupDetails
+  // Only makes API call after 500ms of no new input
+  // Prevents API spam when user is typing
   const debouncedFetch = useCallback(
     debounce((value) => {
       if (value) {
         fetchGroupDetails(value);
       } else {
+        // Reset group details if value is empty
         setGroupDetails({ groupName: "", region: "" });
       }
     }, 500),
     []
   );
 
+  // Handler for group number input changes
+  // Strips non-numeric characters and triggers debounced API fetch
   const handleGroupNoChange = (e) => {
-    const value = e.target.value.replace(/[^0-9]/g, "");
+    const value = e.target.value.replace(/[^0-9]/g, ""); // Remove non-numeric chars
     setGroupNo(value);
     debouncedFetch(value);
   };
