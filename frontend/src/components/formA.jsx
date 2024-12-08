@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import "./formA.css";
 import logo from "../assets/JSG_logo.png";
@@ -9,6 +9,7 @@ export default function FormA() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
     watch,
   } = useForm();
@@ -28,6 +29,12 @@ export default function FormA() {
   const [gstAmount, setGstAmount] = useState(0);
   const [grandTotal, setGrandTotal] = useState(0);
   const [netPayable, setNetPayable] = useState(0);
+
+  //For AutoFilling
+  const [groupNo, setGroupNo] = useState(""); // For tracking the group number input
+  const [groupDetails, setGroupDetails] = useState({
+    groupName: "",
+  });
 
   // Calculate the contribution dynamically
   useEffect(() => {
@@ -126,6 +133,73 @@ export default function FormA() {
     window.print();
   };
 
+  // Fetches group details from the API based on provided group number
+  // Makes a GET request to /api/groups/{groupNo} endpoint
+  // Updates groupDetails state with the response data
+  const fetchGroupDetails = async (groupNo) => {
+    try {
+      const response = await fetch(`${remoteUrl}/api/groups/${groupNo}`);
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Update both the display state and the form values
+        setGroupDetails({
+          groupName: result.data.groupName || "",
+        });
+
+        // Update the form values using setValue
+        setValue("groupName", result.data.groupName || "");
+      } else {
+        setGroupDetails({
+          groupName: "",
+        });
+
+        // Clear the form values
+        setValue("sponsoringGroup", "");
+      }
+    } catch (error) {
+      console.error("Error fetching group details:", error);
+    }
+  };
+
+  // Debounce utility function to limit rate of function calls
+  // Returns a new function that will only execute after wait time has elapsed
+  // Useful for preventing too many API calls
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  // Memoized debounced version of fetchGroupDetails
+  // Only makes API call after 500ms of no new input
+  // Prevents API spam when user is typing
+  const debouncedFetch = useCallback(
+    debounce((value) => {
+      if (value) {
+        fetchGroupDetails(value);
+      } else {
+        // Reset group details if value is empty
+        setGroupDetails({ groupName: "" });
+      }
+    }, 500),
+    []
+  );
+
+  // Handler for group number input changes
+  // Strips non-numeric characters and triggers debounced API fetch
+  const handleGroupNoChange = (e) => {
+    const value = e.target.value.replace(/[^0-9]/g, ""); // Remove non-numeric chars
+    setGroupNo(value);
+    debouncedFetch(value);
+  };
+
   return (
     <div className="form-container">
       {/* Header Section */}
@@ -161,8 +235,9 @@ export default function FormA() {
               <input
                 type="text"
                 placeholder="Name of the Group"
+                defaultValue={groupDetails.groupName}
                 {...register("groupName", {
-                  required: "Group Name is required",
+                  required: "Group name is required",
                 })}
               />
               {errors.groupName && (
@@ -175,9 +250,11 @@ export default function FormA() {
               <input
                 type="text"
                 placeholder="Group Number"
+                value={groupNo}
                 {...register("groupNumber", {
                   required: "Group Number is required",
                 })}
+                onChange={handleGroupNoChange}
               />
               {errors.groupNumber && (
                 <span className="error">{errors.groupNumber.message}</span>
