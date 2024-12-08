@@ -477,6 +477,102 @@ export default function FormA() {
             </div>
           </div>
 
+          {/* New Payment Details Section */}
+          <div className="payment-details">
+            <h3>Payment Details</h3>
+
+            <div className="payment-row">
+              <div className="input-group">
+                <h5>DD / Cheque / IMPS / Online Transfer Ref. No.</h5>
+                <input
+                  type="text"
+                  placeholder="Reference Number"
+                  {...register("paymentReferenceNumber", {
+                    // required: "Reference Number is required",
+                  })}
+                />
+                {errors.paymentReferenceNumber && (
+                  <span className="error">
+                    {errors.paymentReferenceNumber.message}
+                  </span>
+                )}
+              </div>
+              <div className="input-group">
+                <h5 style={{ textAlign: "left" }}>Date</h5>
+                <input
+                  type="date"
+                  {...register("paymentDate", {
+                    // required: "Date is required",
+                  })}
+                />
+                {errors.paymentDate && (
+                  <span className="error">{errors.paymentDate.message}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="payment-row">
+              <div className="input-group">
+                <h5>Amount Paid</h5>
+                <input
+                  type="text"
+                  placeholder="Amount Paid"
+                  {...register("amountPaid", {
+                    // required: "Amount Paid is required",
+                  })}
+                />
+                {errors.amountPaid && (
+                  <span className="error">{errors.amountPaid.message}</span>
+                )}
+              </div>
+              <div className="input-group">
+                <h5>Drawn On (Bank Name)</h5>
+                <input
+                  type="text"
+                  placeholder="Bank Name"
+                  {...register("drawnOnBank", {
+                    // required: "Bank Name is required",
+                  })}
+                />
+                {errors.drawnOnBank && (
+                  <span className="error">{errors.drawnOnBank.message}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="input-group">
+              <h5>Branch</h5>
+              <input
+                type="text"
+                placeholder="Bank Branch"
+                {...register("bankBranch", {
+                  // required: "Branch is required",
+                })}
+              />
+              {errors.bankBranch && (
+                <span className="error">{errors.bankBranch.message}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Account Details Section */}
+          <fieldset className="account-section">
+            <legend>Account Details</legend>
+            <div className="account-details">
+              <p>
+                <strong>A/c Name:</strong> JSG International Federation
+                <br />
+                <strong>Bank:</strong> Indian Bank
+                <br />
+                <strong>A/c No.:</strong> 417721000
+                <br />
+                <strong>IFSC Code:</strong> IDIB000P049
+                <br />
+                <strong>Branch:</strong> Prarthana Samaj Branch, Mumbai
+              </p>
+            </div>
+          </fieldset>
+
           {/* Action Buttons */}
           <div className="form-actions">
             <button
