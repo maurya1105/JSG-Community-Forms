@@ -75,7 +75,28 @@ const contributionSchema = new mongoose.Schema({
   receiptNumber:{
     type:String,
     required:true
+  },
+  paymentReferenceNumber:{
+    type:String,
+    required:false
+  },
+  paymentDate:{
+    type:Date,
+    required:false
+  },
+  amountPaid:{
+    type:String,
+    required:false
+  },
+  drawnOnBank:{
+    type:String,
+    required:false
+  },
+  bankBranch:{
+    type:String,
+    required:false
   }
+
 });
 
 module.exports = mongoose.model('Contribution', contributionSchema);
