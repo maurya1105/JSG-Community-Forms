@@ -336,17 +336,24 @@ export default function App() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        // If request successful, update state with group name and region
+        // Update both the display state and the form values
         setGroupDetails({
           groupName: result.data.groupName || "",
           region: result.data.region || "",
         });
+
+        // Update the form values using setValue
+        setValue("region", result.data.region || "");
+        setValue("sponsoringGroup", result.data.groupName || "");
       } else {
-        // Reset state if request fails
         setGroupDetails({
           groupName: "",
           region: "",
         });
+
+        // Clear the form values
+        setValue("region", "");
+        setValue("sponsoringGroup", "");
       }
     } catch (error) {
       console.error("Error fetching group details:", error);
@@ -451,8 +458,8 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Region"
-                value={groupDetails.region}
-                {...register("region", {})}
+                defaultValue={groupDetails.region}
+                {...register("region")}
               />
               {errors.region && (
                 <span className="error">{errors.region.message}</span>
@@ -490,8 +497,8 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Name of Sponsoring Group"
-                value={groupDetails.groupName}
-                {...register("sponsoringGroup", {})}
+                defaultValue={groupDetails.groupName}
+                {...register("sponsoringGroup")}
               />
               {errors.sponsoringGroup && (
                 <span className="error">{errors.sponsoringGroup.message}</span>
