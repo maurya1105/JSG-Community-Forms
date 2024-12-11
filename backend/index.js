@@ -63,6 +63,76 @@ const Contribution = require('./models/formA_schema'); // Import the formA model
 const Forum = require('./models/formB_schema'); // Import the formB model
 const Group = require('./models/group_schema'); // Import the Group model
 
+// GET endpoint for autocomplete suggestions
+app.get('/api/suggestions', async (req, res) => {
+  try {
+    const { query, type, region } = req.query;
+
+    // Validate input
+    if (!query || !type) {
+      return res.status(400).json({
+        success: false,
+        message: 'Query and type are required'
+      });
+    }
+
+    // Create a case-insensitive regex search
+    const searchRegex = new RegExp(query, 'i');
+
+    let suggestions;
+    // Different search logic based on type of suggestion
+    switch (type) {
+      case 'region':
+        suggestions = await Group.find({ 
+          region: searchRegex 
+        }).select('region');
+        break;
+      
+      case 'groupName':
+        // If region is provided, filter by region as well
+        const filter = region 
+          ? { 
+              groupName: searchRegex, 
+              region: new RegExp(region, 'i') 
+            }
+          : { groupName: searchRegex };
+
+        suggestions = await Group.find(filter)
+          .select('groupName groupNo region')
+          .limit(100);
+        break;
+      
+      default:
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid suggestion type'
+        });
+    }
+
+    // Remove duplicates while preserving order
+    const uniqueSuggestions = Array.from(
+      new Map(suggestions.map(item => 
+        type === 'region' 
+          ? [item.region, item]
+          : [item.groupName, item]
+      )).values()
+    );
+
+    res.status(200).json({
+      success: true,
+      count: uniqueSuggestions.length,
+      data: uniqueSuggestions
+    });
+  } catch (error) {
+    console.error('Error fetching suggestions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch suggestions',
+      error: error.message
+    });
+  }
+});
+
 // Endpoint to fetch all groups (if needed)
 app.get('/api/groups', async (req, res) => {
   try {
@@ -204,7 +274,7 @@ app.post('/api/forums', upload.fields([
       forumName: req.body.forumName,
       groupNo: groupNo,
       region: req.body.region,
-      sponsoringGroup: req.body.sponsoringGroup,
+      groupName: req.body.groupName,
       address: req.body.address,
       pinCode: req.body.pinCode,
       phone: req.body.phone,
