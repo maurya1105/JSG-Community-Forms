@@ -1,7 +1,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import logo from "../assets/JSG_logo.png";
-import "./formB.css";
+import css from "./formB.module.css";
 import { remoteUrl } from "../api.config";
 import axios from "axios";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -66,6 +66,200 @@ export default function App() {
     groupName: "",
     region: "",
   });
+
+  // State for managing suggestions and visibility
+  const [regionSuggestions, setRegionSuggestions] = useState([]); // Holds suggestions for the region input
+  const [groupNameSuggestions, setGroupNameSuggestions] = useState([]); // Holds suggestions for the group name input
+  const [showRegionSuggestions, setShowRegionSuggestions] = useState(false); // Controls visibility of the region suggestions dropdown
+  const [showGroupNameSuggestions, setShowGroupNameSuggestions] =
+    useState(false); // Controls visibility of the group name suggestions dropdown
+
+  // Watch the current region value (react-hook-form's watch)
+  const currentRegion = watch("region"); // Tracks the selected region in real-time
+
+  // Debounce utility function to limit the frequency of API calls
+  const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout); // Clear any pending timeout
+        func(...args); // Execute the function after the specified delay
+      };
+      clearTimeout(timeout); // Reset the timeout for consecutive calls
+      timeout = setTimeout(later, wait); // Set a new timeout
+    };
+  };
+
+  // Fetch suggestions for the region input
+  const fetchRegionSuggestions = async (query) => {
+    if (query.length < 2) {
+      // Do not fetch suggestions for queries shorter than 2 characters
+      setRegionSuggestions([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/suggestions?query=${query}&type=region`
+      );
+      const result = await response.json();
+
+      if (result.success) {
+        setRegionSuggestions(result.data); // Populate suggestions list
+        setShowRegionSuggestions(true); // Show the suggestions dropdown
+      }
+    } catch (error) {
+      console.error("Error fetching region suggestions:", error);
+    }
+  };
+
+  // Fetch suggestions for the group name input (filtered by selected region)
+  const fetchGroupNameSuggestions = async (query) => {
+    if (query.length < 2) {
+      // Do not fetch suggestions for queries shorter than 2 characters
+      setGroupNameSuggestions([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
+          currentRegion || ""
+        )}`
+      );
+      const result = await response.json();
+
+      if (result.success) {
+        setGroupNameSuggestions(result.data); // Populate suggestions list
+        setShowGroupNameSuggestions(true); // Show the suggestions dropdown
+      }
+    } catch (error) {
+      console.error("Error fetching group name suggestions:", error);
+    }
+  };
+
+  // Create debounced versions of the suggestion fetch functions
+  const debouncedFetchRegionSuggestions = useCallback(
+    debounce(fetchRegionSuggestions, 300), // Debounce with a delay of 300ms
+    []
+  );
+
+  const debouncedFetchGroupNameSuggestions = useCallback(
+    debounce(fetchGroupNameSuggestions, 300), // Debounce with a delay of 300ms
+    [currentRegion] // Dependency to refresh when the region changes
+  );
+
+  // Fetch group details when a group number is selected or input
+  const fetchGroupDetails = async (groupNo) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/groups/${String(groupNo)}`
+      );
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Populate form fields with the fetched group details
+        setValue("region", result.data.region || "");
+        setValue("groupName", result.data.groupName || "");
+        setValue("groupNo", String(result.data.groupNo || groupNo)); // Explicitly set group number
+        setGroupDetails({
+          groupName: result.data.groupName || "",
+          region: result.data.region || "",
+        });
+      } else {
+        // Clear the form fields if no group details are found
+        setValue("region", "");
+        setValue("groupName", "");
+        setValue("groupNo", "");
+        setGroupDetails({ groupName: "", region: "" });
+      }
+    } catch (error) {
+      console.error("Error fetching group details:", error);
+    }
+  };
+
+  // Handle region input changes
+  const handleRegionInputChange = (e) => {
+    const value = e.target.value;
+    setValue("region", value); // Update the form value for region
+
+    // Reset group name when region changes
+    setValue("groupName", "");
+    setGroupNameSuggestions([]);
+    setShowGroupNameSuggestions(false);
+
+    // Fetch suggestions for the updated region input
+    debouncedFetchRegionSuggestions(value);
+  };
+
+  // Handle group name input changes
+  const handleGroupNameInputChange = (e) => {
+    const value = e.target.value;
+
+    if (currentRegion) {
+      // Fetch group name suggestions only if a region is selected
+      setValue("groupName", value);
+      debouncedFetchGroupNameSuggestions(value);
+    } else {
+      // Alert the user to select a region before typing a group name
+      alert("Please select a region first");
+      e.target.value = ""; // Clear the input
+    }
+  };
+
+  // Handle the selection of a region suggestion
+  const selectRegionSuggestion = (region) => {
+    setValue("region", region); // Update the form value for region
+    setShowRegionSuggestions(false); // Hide the suggestions dropdown
+
+    // Reset group name and suggestions when a region is selected
+    setValue("groupName", "");
+    setGroupNameSuggestions([]);
+  };
+
+  // Handle the selection of a group name suggestion
+  const selectGroupNameSuggestion = (suggestion) => {
+    setValue("groupName", suggestion.groupName); // Update the form value for group name
+    const groupNoString = String(suggestion.groupNo);
+    setValue("groupNo", groupNoString); // Update the form value for group number
+    setGroupNo(groupNoString);
+    fetchGroupDetails(groupNoString); // Fetch and populate group details
+    setShowGroupNameSuggestions(false); // Hide the suggestions dropdown
+  };
+
+  // Handle changes to the group number input
+  const handleGroupNoChange = (e) => {
+    const value = e.target.value.replace(/[^0-9]/g, ""); // Allow only numeric values
+    setGroupNo(value);
+    fetchGroupDetails(value); // Fetch and populate group details
+  };
+
+  // Close suggestions dropdown when clicking outside the input fields
+  const regionInputRef = useRef(null); // Ref for the region input field
+  const groupNameInputRef = useRef(null); // Ref for the group name input field
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        regionInputRef.current &&
+        !regionInputRef.current.contains(event.target)
+      ) {
+        setShowRegionSuggestions(false); // Close region suggestions
+      }
+
+      if (
+        groupNameInputRef.current &&
+        !groupNameInputRef.current.contains(event.target)
+      ) {
+        setShowGroupNameSuggestions(false); // Close group name suggestions
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside); // Add click listener
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside); // Cleanup listener
+    };
+  }, []); // Run once on component mount
 
   useEffect(() => {
     // Check if presidentMobile is empty and presidentWhatsapp is a valid phone number
@@ -327,88 +521,17 @@ export default function App() {
     window.print();
   };
 
-  // Fetches group details from the API based on provided group number
-  // Makes a GET request to /api/groups/{groupNo} endpoint
-  // Updates groupDetails state with the response data
-  const fetchGroupDetails = async (groupNo) => {
-    try {
-      const response = await fetch(`${remoteUrl}/api/groups/${groupNo}`);
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        // Update both the display state and the form values
-        setGroupDetails({
-          groupName: result.data.groupName || "",
-          region: result.data.region || "",
-        });
-
-        // Update the form values using setValue
-        setValue("region", result.data.region || "");
-        setValue("sponsoringGroup", result.data.groupName || "");
-      } else {
-        setGroupDetails({
-          groupName: "",
-          region: "",
-        });
-
-        // Clear the form values
-        setValue("region", "");
-        setValue("sponsoringGroup", "");
-      }
-    } catch (error) {
-      console.error("Error fetching group details:", error);
-    }
-  };
-
-  // Debounce utility function to limit rate of function calls
-  // Returns a new function that will only execute after wait time has elapsed
-  // Useful for preventing too many API calls
-  function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
-  }
-
-  // Memoized debounced version of fetchGroupDetails
-  // Only makes API call after 500ms of no new input
-  // Prevents API spam when user is typing
-  const debouncedFetch = useCallback(
-    debounce((value) => {
-      if (value) {
-        fetchGroupDetails(value);
-      } else {
-        // Reset group details if value is empty
-        setGroupDetails({ groupName: "", region: "" });
-      }
-    }, 500),
-    []
-  );
-
-  // Handler for group number input changes
-  // Strips non-numeric characters and triggers debounced API fetch
-  const handleGroupNoChange = (e) => {
-    const value = e.target.value.replace(/[^0-9]/g, ""); // Remove non-numeric chars
-    setGroupNo(value);
-    debouncedFetch(value);
-  };
-
   return (
-    <div className="form-container">
+    <div className={css["form-container"]}>
       {/* Header Section */}
-      <div className="header-section">
+      <div className={css["header-section"]}>
         <img
           src={logo} // Replace with the logo URL
           alt="Logo"
-          className="logo"
+          className={css.logo}
         />
 
-        <div className="header-details">
+        <div className={css["header-details"]}>
           <h1>JAIN SOCIAL GROUPS INT. FEDERATION</h1>
           <p>
             4-O/P, Vijay Chambers, Opp. Dreamland Cinema, Tribhuvan Road, Mumbai
@@ -418,7 +541,7 @@ export default function App() {
             <a href="https://jsgif.co.in">www.jsgif.co.in</a>
           </p>
         </div>
-        <h1 className="form-title">Form "B"</h1>
+        <h1 className={css["form-title"]}>Form "B"</h1>
       </div>
 
       {/* Form Section */}
@@ -426,12 +549,15 @@ export default function App() {
         ref={componentRef}
         style={{ padding: "20px", background: "#3f0986", height: "auto" }}
       >
-        <form onSubmit={handleSubmit(onSubmit)} className="scrolling-form">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className={css["scrolling-form"]}
+        >
           {/* General Info Section */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>General Info</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>STD Code</h5>
               <input
                 type="text"
@@ -449,24 +575,49 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.stdCode && (
-                <span className="error">{errors.stdCode.message}</span>
+                <span className={css.error}>{errors.stdCode.message}</span>
               )}
             </div>
 
-            <div className="form-group">
-              <h5>Region</h5>
+            {/* Region Input with Enhanced Autocomplete */}
+            <div className={css["form-group"]} ref={regionInputRef}>
+              <h5 htmlFor="region" className={css["input-label"]}>
+                Region
+              </h5>
               <input
+                id="region"
                 type="text"
-                placeholder="Region"
-                defaultValue={groupDetails.region}
-                {...register("region")}
+                placeholder="Search for a region"
+                className={css["input-field"]}
+                {...register("region", {
+                  // required: "Region is required",
+                })}
+                onChange={handleRegionInputChange}
+                onFocus={() =>
+                  regionSuggestions.length > 0 && setShowRegionSuggestions(true)
+                }
               />
               {errors.region && (
-                <span className="error">{errors.region.message}</span>
+                <p className={css.error}>{errors.region.message}</p>
+              )}
+
+              {/* Region Suggestions Dropdown */}
+              {showRegionSuggestions && regionSuggestions.length > 0 && (
+                <ul className={css["suggestions-dropdown"]}>
+                  {regionSuggestions.map((suggestion, index) => (
+                    <li
+                      key={index}
+                      onClick={() => selectRegionSuggestion(suggestion.region)}
+                      className={css["suggestion-item"]}
+                    >
+                      {suggestion.region}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Date of Inaugration</h5>
               <input
                 type="date"
@@ -474,13 +625,13 @@ export default function App() {
                 {...register("dateOfInaugration", {})}
               />
               {errors.dateOfInaugration && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.dateOfInaugration.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Date of Charter</h5>
               <input
                 type="date"
@@ -488,24 +639,57 @@ export default function App() {
                 {...register("dateOfCharter", {})}
               />
               {errors.dateOfCharter && (
-                <span className="error">{errors.dateOfCharter.message}</span>
+                <span className={css.error}>
+                  {errors.dateOfCharter.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
-              <h5>Name of Sponsoring Group</h5>
+            {/* Group Name Input with Enhanced Autocomplete */}
+            <div className={css["form-group"]} ref={groupNameInputRef}>
+              <h5 htmlFor="groupName" className={css["input-label"]}>
+                Group Name
+              </h5>
               <input
+                id="groupName"
                 type="text"
-                placeholder="Name of Sponsoring Group"
-                defaultValue={groupDetails.groupName}
-                {...register("sponsoringGroup")}
+                placeholder={
+                  currentRegion
+                    ? `Search for a group in ${currentRegion}`
+                    : "Select Region First"
+                }
+                className={css["input-field"]}
+                {...register("groupName", {
+                  // required: "Group Name is required",
+                })}
+                onChange={handleGroupNameInputChange}
+                onFocus={() =>
+                  groupNameSuggestions.length > 0 &&
+                  setShowGroupNameSuggestions(true)
+                }
+                disabled={!currentRegion}
               />
-              {errors.sponsoringGroup && (
-                <span className="error">{errors.sponsoringGroup.message}</span>
+              {errors.groupName && (
+                <p className={css.error}>{errors.groupName.message}</p>
+              )}
+
+              {/* Group Name Suggestions Dropdown */}
+              {showGroupNameSuggestions && groupNameSuggestions.length > 0 && (
+                <ul className={css["suggestions-dropdown"]}>
+                  {groupNameSuggestions.map((suggestion, index) => (
+                    <li
+                      key={index}
+                      onClick={() => selectGroupNameSuggestion(suggestion)}
+                      className={css["suggestion-item"]}
+                    >
+                      {suggestion.groupName}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name of the Forum</h5>
               <input
                 type="text"
@@ -513,31 +697,36 @@ export default function App() {
                 {...register("forumName", {})}
               />
               {errors.forumName && (
-                <span className="error">{errors.forumName.message}</span>
+                <span className={css.error}>{errors.forumName.message}</span>
               )}
             </div>
 
-            <div className="form-group">
-              <h5>Group No.</h5>
+            {/* Group Number Input */}
+            <div className={css["form-group"]}>
+              <h5 htmlFor="groupNo" className={css["input-label"]}>
+                Group Number
+              </h5>
               <input
+                id="groupNo"
                 type="text"
-                placeholder="Group No."
                 value={groupNo}
+                placeholder="Enter group number"
+                className={css["input-field"]}
                 {...register("groupNo", {
+                  // required: "Group No is required",
                   pattern: {
-                    value: /^[0-9]*$/i,
+                    value: /^[0-9]*$/,
                     message: "Please enter only numbers",
                   },
                 })}
-                onInput={handleNumericInput}
                 onChange={handleGroupNoChange}
               />
               {errors.groupNo && (
-                <span className="error">{errors.groupNo.message}</span>
+                <p className={css.error}>{errors.groupNo.message}</p>
               )}
             </div>
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Correspondence Address</h5>
               <textarea
                 type="text"
@@ -545,11 +734,11 @@ export default function App() {
                 {...register("address", {})}
               />
               {errors.address && (
-                <span className="error">{errors.address.message}</span>
+                <span className={css.error}>{errors.address.message}</span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -565,11 +754,11 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.pinCode && (
-                <span className="error">{errors.pinCode.message}</span>
+                <span className={css.error}>{errors.pinCode.message}</span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -591,11 +780,11 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.phone && (
-                <span className="error">{errors.phone.message}</span>
+                <span className={css.error}>{errors.phone.message}</span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile</h5>
               <input
                 type="text"
@@ -617,11 +806,11 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.mobile && (
-                <span className="error">{errors.mobile.message}</span>
+                <span className={css.error}>{errors.mobile.message}</span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -634,19 +823,19 @@ export default function App() {
                 })}
               />
               {errors.email && (
-                <span className="error">{errors.email.message}</span>
+                <span className={css.error}>{errors.email.message}</span>
               )}
             </div>
           </div>
 
           {/*Comittee Member Details */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>
               Details of General Council Members and Managing Committee Members
               for 2025 - 2027
             </h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>
                 General Meeting for Election of our Forum was held on Date
               </h5>
@@ -656,7 +845,7 @@ export default function App() {
               />
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>
                 Following Office Bearers of our Forum were elected on Date
               </h5>
@@ -668,10 +857,10 @@ export default function App() {
           </div>
 
           {/*President */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(1) President</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -684,11 +873,13 @@ export default function App() {
                 })}
               />
               {errors.presidentName && (
-                <span className="error">{errors.presidentName.message}</span>
+                <span className={css.error}>
+                  {errors.presidentName.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Passport Size Photo</h5>
               <input
                 type="file"
@@ -697,24 +888,26 @@ export default function App() {
                 onChange={(e) => handleFileChange(e, "presidentPhoto")} // Unique field name
               />
               {errors.presidentPhoto && (
-                <span className="error">{errors.presidentPhoto.message}</span>
+                <span className={css.error}>
+                  {errors.presidentPhoto.message}
+                </span>
               )}
             </div>
 
             {/* Image Preview for President */}
             {previews.presidentPhoto && (
-              <div className="mt-3">
+              <div className={css["mt-3"]}>
                 <p>Image Preview (President):</p>
                 <img
                   src={previews.presidentPhoto}
                   alt="President preview"
-                  className="img-thumbnail"
+                  className={css["img-thumbnail"]}
                   style={{ maxWidth: "200px" }}
                 />
               </div>
             )}
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Correspondence Address</h5>
               <textarea
                 type="text"
@@ -727,11 +920,13 @@ export default function App() {
                 })}
               />
               {errors.presidentAddress && (
-                <span className="error">{errors.presidentAddress.message}</span>
+                <span className={css.error}>
+                  {errors.presidentAddress.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -747,11 +942,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.presidentPinCode && (
-                <span className="error">{errors.presidentPinCode.message}</span>
+                <span className={css.error}>
+                  {errors.presidentPinCode.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -773,11 +970,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.presidentPhone && (
-                <span className="error">{errors.presidentPhone.message}</span>
+                <span className={css.error}>
+                  {errors.presidentPhone.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -799,13 +998,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.presidentWhatsapp && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.presidentWhatsapp.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -828,11 +1027,13 @@ export default function App() {
                 onChange={handlePresidentMobile}
               />
               {errors.presidentMobile && (
-                <span className="error">{errors.presidentMobile.message}</span>
+                <span className={css.error}>
+                  {errors.presidentMobile.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -845,11 +1046,13 @@ export default function App() {
                 })}
               />
               {errors.presidentEmail && (
-                <span className="error">{errors.presidentEmail.message}</span>
+                <span className={css.error}>
+                  {errors.presidentEmail.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Occupation Details</h5>
               <input
                 type="text"
@@ -857,13 +1060,13 @@ export default function App() {
                 {...register("presidentOccupation", {})}
               />
               {errors.presidentOccupation && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.presidentOccupation.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Name</h5>
               <input
                 type="text"
@@ -876,13 +1079,13 @@ export default function App() {
                 })}
               />
               {errors.presidentSpouseName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.presidentSpouseName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Birth Date</h5>
               <input
                 type="date"
@@ -895,13 +1098,13 @@ export default function App() {
                 })}
               />
               {errors.presidentBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.presidentBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Birth Date</h5>
               <input
                 type="date"
@@ -914,13 +1117,13 @@ export default function App() {
                 })}
               />
               {errors.presidentSpouseBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.presidentSpouseBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Marriage Date</h5>
               <input
                 type="date"
@@ -935,7 +1138,7 @@ export default function App() {
                 })}
               />
               {errors.presidentMarriageDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.presidentMarriageDate.message}
                 </span>
               )}
@@ -943,10 +1146,10 @@ export default function App() {
           </div>
 
           {/*Immediate Former President */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(2) Immediate Former President</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -959,13 +1162,13 @@ export default function App() {
                 })}
               />
               {errors.immediateFormerPresidentName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.immediateFormerPresidentName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Passport Size Photo</h5>
               <input
                 type="file"
@@ -976,7 +1179,7 @@ export default function App() {
                 } // Unique field name
               />
               {errors.immediateFormerPresidentPhoto && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.immediateFormerPresidentPhoto.message}
                 </span>
               )}
@@ -984,18 +1187,18 @@ export default function App() {
 
             {/* Image Preview for Immediate Former President */}
             {previews.immediateFormerPresidentPhoto && (
-              <div className="mt-3">
+              <div className={css["mt-3"]}>
                 <p>Image Preview (Immediate Former President):</p>
                 <img
                   src={previews.immediateFormerPresidentPhoto}
                   alt="Secretary preview"
-                  className="img-thumbnail"
+                  className={css["img-thumbnail"]}
                   style={{ maxWidth: "200px" }}
                 />
               </div>
             )}
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Correspondence Address</h5>
               <textarea
                 type="text"
@@ -1008,13 +1211,13 @@ export default function App() {
                 })}
               />
               {errors.immediateFormerPresidentAddress && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.immediateFormerPresidentAddress.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -1030,13 +1233,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.immediateFormerPresidentPinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.immediateFormerPresidentPinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -1058,13 +1261,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.immediateFormerPresidentPhone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.immediateFormerPresidentPhone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -1086,13 +1289,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.immediateFormerPresidentWhatsapp && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.immediateFormerPresidentWhatsapp.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -1115,13 +1318,13 @@ export default function App() {
                 onChange={handleImmediateFormerPresidentMobile}
               />
               {errors.immediateFormerPresidentMobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.immediateFormerPresidentMobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -1134,13 +1337,13 @@ export default function App() {
                 })}
               />
               {errors.immediateFormerPresidentEmail && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.immediateFormerPresidentEmail.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Occupation Details</h5>
               <input
                 type="text"
@@ -1148,13 +1351,13 @@ export default function App() {
                 {...register("immediateFormerPresidentOccupation", {})}
               />
               {errors.immediateFormerPresidentOccupation && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.immediateFormerPresidentOccupation.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Name</h5>
               <input
                 type="text"
@@ -1167,13 +1370,13 @@ export default function App() {
                 })}
               />
               {errors.immediateFormerPresidentSpouseName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.immediateFormerPresidentSpouseName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Birth Date</h5>
               <input
                 type="date"
@@ -1186,13 +1389,13 @@ export default function App() {
                 })}
               />
               {errors.immediateFormerPresidentBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.immediateFormerPresidentBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Birth Date</h5>
               <input
                 type="date"
@@ -1205,13 +1408,13 @@ export default function App() {
                 })}
               />
               {errors.immediateFormerPresidentSpouseBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.immediateFormerPresidentSpouseBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Marriage Date</h5>
               <input
                 type="date"
@@ -1226,7 +1429,7 @@ export default function App() {
                 })}
               />
               {errors.immediateFormerPresidentMarriageDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.immediateFormerPresidentMarriageDate.message}
                 </span>
               )}
@@ -1234,10 +1437,10 @@ export default function App() {
           </div>
 
           {/*Founder President */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(3) Founder President</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -1250,13 +1453,13 @@ export default function App() {
                 })}
               />
               {errors.founderPresidentName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.founderPresidentName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Passport Size Photo</h5>
               <input
                 type="file"
@@ -1265,25 +1468,25 @@ export default function App() {
                 onChange={(e) => handleFileChange(e, "founderPresidentPhoto")} // Unique field name
               />
               {errors.founderPresidentPhoto && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.founderPresidentPhoto.message}
                 </span>
               )}
             </div>
             {/* Image Preview for Founder President */}
             {previews.founderPresidentPhoto && (
-              <div className="mt-3">
+              <div className={css["mt-3"]}>
                 <p>Image Preview (Founder President):</p>
                 <img
                   src={previews.founderPresidentPhoto}
                   alt="Founder President preview"
-                  className="img-thumbnail"
+                  className={css["img-thumbnail"]}
                   style={{ maxWidth: "200px" }}
                 />
               </div>
             )}
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Correspondence Address</h5>
               <textarea
                 type="text"
@@ -1296,13 +1499,13 @@ export default function App() {
                 })}
               />
               {errors.founderPresidentAddress && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.founderPresidentAddress.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -1318,13 +1521,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.founderPresidentPinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.founderPresidentPinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -1346,13 +1549,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.founderPresidentPhone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.founderPresidentPhone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -1374,13 +1577,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.founderPresidentWhatsapp && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.founderPresidentWhatsapp.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile</h5>
               <input
                 type="text"
@@ -1403,13 +1606,13 @@ export default function App() {
                 onChange={handleFounderPresidentMobile}
               />
               {errors.founderPresidentMobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.founderPresidentMobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -1422,13 +1625,13 @@ export default function App() {
                 })}
               />
               {errors.founderPresidentEmail && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.founderPresidentEmail.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Occupation Details</h5>
               <input
                 type="text"
@@ -1436,13 +1639,13 @@ export default function App() {
                 {...register("founderPresidentOccupation", {})}
               />
               {errors.founderPresidentOccupation && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.founderPresidentOccupation.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Name</h5>
               <input
                 type="text"
@@ -1455,13 +1658,13 @@ export default function App() {
                 })}
               />
               {errors.founderPresidentSpouseName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.founderPresidentSpouseName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Birth Date</h5>
               <input
                 type="date"
@@ -1474,13 +1677,13 @@ export default function App() {
                 })}
               />
               {errors.founderPresidentBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.founderPresidentBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Birth Date</h5>
               <input
                 type="date"
@@ -1493,13 +1696,13 @@ export default function App() {
                 })}
               />
               {errors.founderPresidentSpouseBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.founderPresidentSpouseBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Marriage Date</h5>
               <input
                 type="date"
@@ -1514,7 +1717,7 @@ export default function App() {
                 })}
               />
               {errors.founderPresidentMarriageDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.founderPresidentMarriageDate.message}
                 </span>
               )}
@@ -1522,10 +1725,10 @@ export default function App() {
           </div>
 
           {/*Nominated Former President 1 */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(5) Nominated Former President - 1</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -1538,13 +1741,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident1Name && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident1Name.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Passport Size Photo</h5>
               <input
                 type="file"
@@ -1555,25 +1758,25 @@ export default function App() {
                 } // Unique field name
               />
               {errors.nominatedFormerPresident1Photo && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident1Photo.message}
                 </span>
               )}
             </div>
             {/* Image Preview for Nominated Former President 1 */}
             {previews.nominatedFormerPresident1Photo && (
-              <div className="mt-3">
+              <div className={css["mt-3"]}>
                 <p>Image Preview (Nominated Former President 1):</p>
                 <img
                   src={previews.nominatedFormerPresident1Photo}
                   alt="Nominated Former President 1 preview"
-                  className="img-thumbnail"
+                  className={css["img-thumbnail"]}
                   style={{ maxWidth: "200px" }}
                 />
               </div>
             )}
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Correspondence Address</h5>
               <textarea
                 type="text"
@@ -1586,13 +1789,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident1Address && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident1Address.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -1608,13 +1811,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident1PinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident1PinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -1636,13 +1839,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident1Phone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident1Phone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -1664,13 +1867,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident1Whatsapp && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident1Whatsapp.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -1693,13 +1896,13 @@ export default function App() {
                 onChange={handleNominatedFormerPresident1Mobile}
               />
               {errors.nominatedFormerPresident1Mobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident1Mobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -1712,13 +1915,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident1Email && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident1Email.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Occupation Details</h5>
               <input
                 type="text"
@@ -1726,13 +1929,13 @@ export default function App() {
                 {...register("nominatedFormerPresident1Occupation", {})}
               />
               {errors.nominatedFormerPresident1Occupation && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident1Occupation.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Name</h5>
               <input
                 type="text"
@@ -1745,13 +1948,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident1SpouseName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident1SpouseName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Birth Date</h5>
               <input
                 type="date"
@@ -1764,13 +1967,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident1BirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident1BirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Birth Date</h5>
               <input
                 type="date"
@@ -1783,13 +1986,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident1SpouseBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident1SpouseBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Marriage Date</h5>
               <input
                 type="date"
@@ -1804,7 +2007,7 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident1MarriageDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident1MarriageDate.message}
                 </span>
               )}
@@ -1812,10 +2015,10 @@ export default function App() {
           </div>
 
           {/*Nominated Former President 2 */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(5) Nominated Former President - 2</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -1828,13 +2031,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident2Name && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident2Name.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Passport Size Photo</h5>
               <input
                 type="file"
@@ -1845,25 +2048,25 @@ export default function App() {
                 } // Unique field name
               />
               {errors.nominatedFormerPresident2Photo && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident2Photo.message}
                 </span>
               )}
             </div>
             {/* Image Preview for Nominated Former President 2 */}
             {previews.nominatedFormerPresident2Photo && (
-              <div className="mt-3">
+              <div className={css["mt-3"]}>
                 <p>Image Preview (Nominated Former President 2):</p>
                 <img
                   src={previews.nominatedFormerPresident2Photo}
                   alt="Nominated Former President 2 preview"
-                  className="img-thumbnail"
+                  className={css["img-thumbnail"]}
                   style={{ maxWidth: "200px" }}
                 />
               </div>
             )}
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Correspondence Address</h5>
               <textarea
                 type="text"
@@ -1876,13 +2079,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident2Address && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident2Address.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -1898,13 +2101,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident2PinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident2PinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -1926,13 +2129,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident2Phone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident2Phone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -1954,13 +2157,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident2Whatsapp && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident2Whatsapp.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -1983,13 +2186,13 @@ export default function App() {
                 onChange={handleNominatedFormerPresident2Mobile}
               />
               {errors.nominatedFormerPresident2Mobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident2Mobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -2002,13 +2205,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident2Email && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident2Email.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Occupation Details</h5>
               <input
                 type="text"
@@ -2016,13 +2219,13 @@ export default function App() {
                 {...register("nominatedFormerPresident2Occupation", {})}
               />
               {errors.nominatedFormerPresident2Occupation && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident2Occupation.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Name</h5>
               <input
                 type="text"
@@ -2035,13 +2238,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident2SpouseName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident2SpouseName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Birth Date</h5>
               <input
                 type="date"
@@ -2054,13 +2257,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident2BirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident2BirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Birth Date</h5>
               <input
                 type="date"
@@ -2073,13 +2276,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident2SpouseBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident2SpouseBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Marriage Date</h5>
               <input
                 type="date"
@@ -2094,7 +2297,7 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident2MarriageDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident2MarriageDate.message}
                 </span>
               )}
@@ -2102,10 +2305,10 @@ export default function App() {
           </div>
 
           {/*Nominated Former President 3 */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(6) Nominated Former President - 3</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -2118,13 +2321,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident3Name && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident3Name.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Passport Size Photo</h5>
               <input
                 type="file"
@@ -2135,25 +2338,25 @@ export default function App() {
                 } // Unique field name
               />
               {errors.nominatedFormerPresident3Photo && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident3Photo.message}
                 </span>
               )}
             </div>
             {/* Image Preview for Nominated Former President 3 */}
             {previews.nominatedFormerPresident3Photo && (
-              <div className="mt-3">
+              <div className={css["mt-3"]}>
                 <p>Image Preview (Nominated Former President 3):</p>
                 <img
                   src={previews.nominatedFormerPresident3Photo}
                   alt="Nominated Former President 3 preview"
-                  className="img-thumbnail"
+                  className={css["img-thumbnail"]}
                   style={{ maxWidth: "200px" }}
                 />
               </div>
             )}
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Correspondence Address</h5>
               <textarea
                 type="text"
@@ -2166,13 +2369,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident3Address && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident3Address.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -2188,13 +2391,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident3PinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident3PinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -2216,13 +2419,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident3Phone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident3Phone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -2244,13 +2447,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident3Whatsapp && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident3Whatsapp.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -2273,13 +2476,13 @@ export default function App() {
                 onChange={handleNominatedFormerPresident3Mobile}
               />
               {errors.nominatedFormerPresident3Mobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident3Mobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -2292,13 +2495,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident3Email && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident3Email.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Occupation Details</h5>
               <input
                 type="text"
@@ -2306,13 +2509,13 @@ export default function App() {
                 {...register("nominatedFormerPresident3Occupation", {})}
               />
               {errors.nominatedFormerPresident3Occupation && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident3Occupation.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Name</h5>
               <input
                 type="text"
@@ -2325,13 +2528,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident3SpouseName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident3SpouseName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Birth Date</h5>
               <input
                 type="date"
@@ -2344,13 +2547,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident3BirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident3BirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Birth Date</h5>
               <input
                 type="date"
@@ -2363,13 +2566,13 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident3SpouseBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident3SpouseBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Marriage Date</h5>
               <input
                 type="date"
@@ -2384,7 +2587,7 @@ export default function App() {
                 })}
               />
               {errors.nominatedFormerPresident3MarriageDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.nominatedFormerPresident3MarriageDate.message}
                 </span>
               )}
@@ -2392,10 +2595,10 @@ export default function App() {
           </div>
 
           {/*Vice President  */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(7) Vice President</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -2408,13 +2611,13 @@ export default function App() {
                 })}
               />
               {errors.vicePresidentName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.vicePresidentName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Passport Size Photo</h5>
               <input
                 type="file"
@@ -2423,25 +2626,25 @@ export default function App() {
                 onChange={(e) => handleFileChange(e, "vicePresidentPhoto")} // Unique field name
               />
               {errors.vicePresidentPhoto && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.vicePresidentPhoto.message}
                 </span>
               )}
             </div>
             {/* Image Preview for Vice President */}
             {previews.vicePresidentPhoto && (
-              <div className="mt-3">
+              <div className={css["mt-3"]}>
                 <p>Image Preview (Vice President):</p>
                 <img
                   src={previews.vicePresidentPhoto}
                   alt="Vice President preview"
-                  className="img-thumbnail"
+                  className={css["img-thumbnail"]}
                   style={{ maxWidth: "200px" }}
                 />
               </div>
             )}
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Correspondence Address</h5>
               <textarea
                 type="text"
@@ -2454,13 +2657,13 @@ export default function App() {
                 })}
               />
               {errors.vicePresidentAddress && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.vicePresidentAddress.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -2476,13 +2679,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.vicePresidentPinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.vicePresidentPinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -2504,13 +2707,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.vicePresidentPhone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.vicePresidentPhone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -2532,13 +2735,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.vicePresidentWhatsapp && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.vicePresidentWhatsapp.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -2561,13 +2764,13 @@ export default function App() {
                 onChange={handleVicePresidentMobile}
               />
               {errors.vicePresidentMobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.vicePresidentMobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -2580,13 +2783,13 @@ export default function App() {
                 })}
               />
               {errors.vicePresidentEmail && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.vicePresidentEmail.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Occupation Details</h5>
               <input
                 type="text"
@@ -2594,13 +2797,13 @@ export default function App() {
                 {...register("vicePresidentOccupation", {})}
               />
               {errors.vicePresidentOccupation && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.vicePresidentOccupation.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Name</h5>
               <input
                 type="text"
@@ -2613,13 +2816,13 @@ export default function App() {
                 })}
               />
               {errors.vicePresidentSpouseName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.vicePresidentSpouseName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Birth Date</h5>
               <input
                 type="date"
@@ -2632,13 +2835,13 @@ export default function App() {
                 })}
               />
               {errors.vicePresidentBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.vicePresidentBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Birth Date</h5>
               <input
                 type="date"
@@ -2651,13 +2854,13 @@ export default function App() {
                 })}
               />
               {errors.vicePresidentSpouseBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.vicePresidentSpouseBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Marriage Date</h5>
               <input
                 type="date"
@@ -2672,7 +2875,7 @@ export default function App() {
                 })}
               />
               {errors.vicePresidentMarriageDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.vicePresidentMarriageDate.message}
                 </span>
               )}
@@ -2680,10 +2883,10 @@ export default function App() {
           </div>
 
           {/*Secretary */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(8) Secretary</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -2696,11 +2899,13 @@ export default function App() {
                 })}
               />
               {errors.secretaryName && (
-                <span className="error">{errors.secretaryName.message}</span>
+                <span className={css.error}>
+                  {errors.secretaryName.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Passport Size Photo</h5>
               <input
                 type="file"
@@ -2709,23 +2914,25 @@ export default function App() {
                 onChange={(e) => handleFileChange(e, "secretaryPhoto")} // Unique field name
               />
               {errors.secretaryPhoto && (
-                <span className="error">{errors.secretaryPhoto.message}</span>
+                <span className={css.error}>
+                  {errors.secretaryPhoto.message}
+                </span>
               )}
             </div>
             {/* Image Preview for Secretary */}
             {previews.secretaryPhoto && (
-              <div className="mt-3">
+              <div className={css["mt-3"]}>
                 <p>Image Preview (Secretary):</p>
                 <img
                   src={previews.secretaryPhoto}
                   alt="Secretary preview"
-                  className="img-thumbnail"
+                  className={css["img-thumbnail"]}
                   style={{ maxWidth: "200px" }}
                 />
               </div>
             )}
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Correspondence Address</h5>
               <textarea
                 type="text"
@@ -2738,11 +2945,13 @@ export default function App() {
                 })}
               />
               {errors.secretaryAddress && (
-                <span className="error">{errors.secretaryAddress.message}</span>
+                <span className={css.error}>
+                  {errors.secretaryAddress.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -2758,11 +2967,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.secretaryPinCode && (
-                <span className="error">{errors.secretaryPinCode.message}</span>
+                <span className={css.error}>
+                  {errors.secretaryPinCode.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -2784,11 +2995,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.secretaryPhone && (
-                <span className="error">{errors.secretaryPhone.message}</span>
+                <span className={css.error}>
+                  {errors.secretaryPhone.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -2810,13 +3023,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.secretaryWhatsapp && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.secretaryWhatsapp.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -2839,11 +3052,13 @@ export default function App() {
                 onChange={handleSecretaryMobile}
               />
               {errors.secretaryMobile && (
-                <span className="error">{errors.secretaryMobile.message}</span>
+                <span className={css.error}>
+                  {errors.secretaryMobile.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -2856,11 +3071,13 @@ export default function App() {
                 })}
               />
               {errors.secretaryEmail && (
-                <span className="error">{errors.secretaryEmail.message}</span>
+                <span className={css.error}>
+                  {errors.secretaryEmail.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Occupation Details</h5>
               <input
                 type="text"
@@ -2868,13 +3085,13 @@ export default function App() {
                 {...register("secretaryOccupation", {})}
               />
               {errors.secretaryOccupation && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.secretaryOccupation.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Name</h5>
               <input
                 type="text"
@@ -2887,13 +3104,13 @@ export default function App() {
                 })}
               />
               {errors.secretarySpouseName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.secretarySpouseName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Birth Date</h5>
               <input
                 type="date"
@@ -2906,13 +3123,13 @@ export default function App() {
                 })}
               />
               {errors.secretaryBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.secretaryBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Birth Date</h5>
               <input
                 type="date"
@@ -2925,13 +3142,13 @@ export default function App() {
                 })}
               />
               {errors.secretarySpouseBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.secretarySpouseBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Marriage Date</h5>
               <input
                 type="date"
@@ -2946,7 +3163,7 @@ export default function App() {
                 })}
               />
               {errors.secretaryMarriageDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.secretaryMarriageDate.message}
                 </span>
               )}
@@ -2954,10 +3171,10 @@ export default function App() {
           </div>
 
           {/*Joint Secretary */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(9) Joint Secretary</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -2970,13 +3187,13 @@ export default function App() {
                 })}
               />
               {errors.jointSecretaryName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.jointSecretaryName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Passport Size Photo</h5>
               <input
                 type="file"
@@ -2985,25 +3202,25 @@ export default function App() {
                 onChange={(e) => handleFileChange(e, "jointSecretaryPhoto")} // Unique field name
               />
               {errors.jointSecretaryPhoto && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.jointSecretaryPhoto.message}
                 </span>
               )}
             </div>
             {/* Image Preview for Joint Secretary */}
             {previews.jointSecretaryPhoto && (
-              <div className="mt-3">
+              <div className={css["mt-3"]}>
                 <p>Image Preview (Joint Secretary):</p>
                 <img
                   src={previews.jointSecretaryPhoto}
                   alt="Secretary preview"
-                  className="img-thumbnail"
+                  className={css["img-thumbnail"]}
                   style={{ maxWidth: "200px" }}
                 />
               </div>
             )}
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Correspondence Address</h5>
               <textarea
                 type="text"
@@ -3016,13 +3233,13 @@ export default function App() {
                 })}
               />
               {errors.jointSecretaryAddress && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.jointSecretaryAddress.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -3038,13 +3255,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.jointSecretaryPinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.jointSecretaryPinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -3066,13 +3283,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.jointSecretaryPhone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.jointSecretaryPhone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -3094,13 +3311,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.jointSecretaryWhatsapp && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.jointSecretaryWhatsapp.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -3123,13 +3340,13 @@ export default function App() {
                 onChange={handleJointSecretaryMobile}
               />
               {errors.jointSecretaryMobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.jointSecretaryMobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -3142,13 +3359,13 @@ export default function App() {
                 })}
               />
               {errors.jointSecretaryEmail && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.jointSecretaryEmail.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Occupation Details</h5>
               <input
                 type="text"
@@ -3156,13 +3373,13 @@ export default function App() {
                 {...register("jointSecretaryOccupation", {})}
               />
               {errors.jointSecretaryOccupation && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.jointSecretaryOccupation.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Name</h5>
               <input
                 type="text"
@@ -3175,13 +3392,13 @@ export default function App() {
                 })}
               />
               {errors.jointSecretarySpouseName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.jointSecretarySpouseName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Birth Date</h5>
               <input
                 type="date"
@@ -3194,13 +3411,13 @@ export default function App() {
                 })}
               />
               {errors.jointSecretaryBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.jointSecretaryBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Birth Date</h5>
               <input
                 type="date"
@@ -3213,13 +3430,13 @@ export default function App() {
                 })}
               />
               {errors.jointSecretarySpouseBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.jointSecretarySpouseBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Marriage Date</h5>
               <input
                 type="date"
@@ -3234,7 +3451,7 @@ export default function App() {
                 })}
               />
               {errors.jointSecretaryMarriageDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.jointSecretaryMarriageDate.message}
                 </span>
               )}
@@ -3242,10 +3459,10 @@ export default function App() {
           </div>
 
           {/*Treasurer  */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(10) Treasurer</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -3258,11 +3475,13 @@ export default function App() {
                 })}
               />
               {errors.treasurerName && (
-                <span className="error">{errors.treasurerName.message}</span>
+                <span className={css.error}>
+                  {errors.treasurerName.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Passport Size Photo</h5>
               <input
                 type="file"
@@ -3271,23 +3490,25 @@ export default function App() {
                 onChange={(e) => handleFileChange(e, "treasurerPhoto")} // Unique field name
               />
               {errors.treasurerPhoto && (
-                <span className="error">{errors.treasurerPhoto.message}</span>
+                <span className={css.error}>
+                  {errors.treasurerPhoto.message}
+                </span>
               )}
             </div>
             {/* Image Preview for Treasurer */}
             {previews.treasurerPhoto && (
-              <div className="mt-3">
+              <div className={css["mt-3"]}>
                 <p>Image Preview (Treasurer):</p>
                 <img
                   src={previews.treasurerPhoto}
                   alt="Treasurer preview"
-                  className="img-thumbnail"
+                  className={css["img-thumbnail"]}
                   style={{ maxWidth: "200px" }}
                 />
               </div>
             )}
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Correspondence Address</h5>
               <textarea
                 type="text"
@@ -3300,11 +3521,13 @@ export default function App() {
                 })}
               />
               {errors.treasurerAddress && (
-                <span className="error">{errors.treasurerAddress.message}</span>
+                <span className={css.error}>
+                  {errors.treasurerAddress.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -3320,11 +3543,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.treasurerPinCode && (
-                <span className="error">{errors.treasurerPinCode.message}</span>
+                <span className={css.error}>
+                  {errors.treasurerPinCode.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -3346,11 +3571,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.treasurerPhone && (
-                <span className="error">{errors.treasurerPhone.message}</span>
+                <span className={css.error}>
+                  {errors.treasurerPhone.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Whatsapp No.</h5>
               <input
                 type="text"
@@ -3372,13 +3599,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.treasurerWhatsapp && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.treasurerWhatsapp.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -3401,11 +3628,13 @@ export default function App() {
                 onChange={handleTreasurerMobile}
               />
               {errors.treasurerMobile && (
-                <span className="error">{errors.treasurerMobile.message}</span>
+                <span className={css.error}>
+                  {errors.treasurerMobile.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -3418,11 +3647,13 @@ export default function App() {
                 })}
               />
               {errors.treasurerEmail && (
-                <span className="error">{errors.treasurerEmail.message}</span>
+                <span className={css.error}>
+                  {errors.treasurerEmail.message}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Occupation Details</h5>
               <input
                 type="text"
@@ -3430,13 +3661,13 @@ export default function App() {
                 {...register("treasurerOccupation", {})}
               />
               {errors.treasurerOccupation && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.treasurerOccupation.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Name</h5>
               <input
                 type="text"
@@ -3449,13 +3680,13 @@ export default function App() {
                 })}
               />
               {errors.treasurerSpouseName && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.treasurerSpouseName.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Birth Date</h5>
               <input
                 type="date"
@@ -3468,13 +3699,13 @@ export default function App() {
                 })}
               />
               {errors.treasurerBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.treasurerBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Spouse's Birth Date</h5>
               <input
                 type="date"
@@ -3487,13 +3718,13 @@ export default function App() {
                 })}
               />
               {errors.treasurerSpouseBirthDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.treasurerSpouseBirthDate.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Marriage Date</h5>
               <input
                 type="date"
@@ -3508,7 +3739,7 @@ export default function App() {
                 })}
               />
               {errors.treasurerMarriageDate && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.treasurerMarriageDate.message}
                 </span>
               )}
@@ -3516,10 +3747,10 @@ export default function App() {
           </div>
 
           {/*Committee Member 1 */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(11) Committee Member - 1</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -3532,13 +3763,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember1Name && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember1Name.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Address</h5>
               <textarea
                 type="text"
@@ -3551,13 +3782,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember1Address && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember1Address.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -3573,13 +3804,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember1PinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember1PinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -3601,13 +3832,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember1Phone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember1Phone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -3629,13 +3860,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember1Mobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember1Mobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -3648,7 +3879,7 @@ export default function App() {
                 })}
               />
               {errors.committeemember1Email && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember1Email.message}
                 </span>
               )}
@@ -3656,10 +3887,10 @@ export default function App() {
           </div>
 
           {/*Committee Member 2 */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(12) Committee Member - 2</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -3672,13 +3903,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember2Name && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember2Name.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Address</h5>
               <textarea
                 type="text"
@@ -3691,13 +3922,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember2Address && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember2Address.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -3713,13 +3944,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember2PinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember2PinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -3741,13 +3972,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember2Phone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember2Phone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -3769,13 +4000,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember2Mobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember2Mobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -3788,7 +4019,7 @@ export default function App() {
                 })}
               />
               {errors.committeemember2Email && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember2Email.message}
                 </span>
               )}
@@ -3796,10 +4027,10 @@ export default function App() {
           </div>
 
           {/*Committee Member 3 */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(13) Committee Member - 3</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -3812,13 +4043,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember3Name && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember3Name.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Address</h5>
               <textarea
                 type="text"
@@ -3831,13 +4062,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember3Address && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember3Address.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -3853,13 +4084,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember3PinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember3PinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -3881,13 +4112,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember3Phone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember3Phone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -3909,13 +4140,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember3Mobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember3Mobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -3928,7 +4159,7 @@ export default function App() {
                 })}
               />
               {errors.committeemember3Email && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember3Email.message}
                 </span>
               )}
@@ -3936,10 +4167,10 @@ export default function App() {
           </div>
 
           {/*Committee Member 4 */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(14) Committee Member - 4</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -3952,13 +4183,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember4Name && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember4Name.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Address</h5>
               <textarea
                 type="text"
@@ -3971,13 +4202,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember4Address && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember4Address.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -3993,13 +4224,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember4PinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember4PinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -4021,13 +4252,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember4Phone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember4Phone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -4049,13 +4280,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember4Mobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember4Mobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -4068,7 +4299,7 @@ export default function App() {
                 })}
               />
               {errors.committeemember4Email && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember4Email.message}
                 </span>
               )}
@@ -4076,10 +4307,10 @@ export default function App() {
           </div>
 
           {/*Committee Member 5 */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(15) Committee Member - 5</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -4092,13 +4323,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember5Name && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember5Name.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Address</h5>
               <textarea
                 type="text"
@@ -4111,13 +4342,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember5Address && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember5Address.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -4133,13 +4364,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember5PinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember5PinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -4161,13 +4392,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember5Phone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember5Phone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -4189,13 +4420,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember5Mobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember5Mobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-MailI ID</h5>
               <input
                 type="email"
@@ -4208,7 +4439,7 @@ export default function App() {
                 })}
               />
               {errors.committeemember5Email && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember5Email.message}
                 </span>
               )}
@@ -4216,10 +4447,10 @@ export default function App() {
           </div>
 
           {/*Committee Member 6 */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(16) Committee Member - 6</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -4232,13 +4463,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember6Name && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember6Name.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Address</h5>
               <textarea
                 type="text"
@@ -4251,13 +4482,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember6Address && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember6Address.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -4273,13 +4504,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember6PinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember6PinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -4301,13 +4532,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember6Phone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember6Phone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -4329,13 +4560,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember6Mobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember6Mobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -4348,7 +4579,7 @@ export default function App() {
                 })}
               />
               {errors.committeemember6Email && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember6Email.message}
                 </span>
               )}
@@ -4356,10 +4587,10 @@ export default function App() {
           </div>
 
           {/*Committee Member 7 */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(17) Committee Member - 7</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -4372,13 +4603,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember7Name && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember7Name.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Address</h5>
               <textarea
                 type="text"
@@ -4391,13 +4622,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember7Address && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember7Address.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -4413,13 +4644,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember7PinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember7PinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -4441,13 +4672,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember7Phone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember7Phone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -4469,13 +4700,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember7Mobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember7Mobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -4488,7 +4719,7 @@ export default function App() {
                 })}
               />
               {errors.committeemember7Email && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember7Email.message}
                 </span>
               )}
@@ -4496,10 +4727,10 @@ export default function App() {
           </div>
 
           {/*Committee Member 8 */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>(18) Committee Member - 8</h3>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Name</h5>
               <input
                 type="text"
@@ -4512,13 +4743,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember8Name && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember8Name.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group full-row">
+            <div className={css["form-group full-row"]}>
               <h5>Address</h5>
               <textarea
                 type="text"
@@ -4531,13 +4762,13 @@ export default function App() {
                 })}
               />
               {errors.committeemember8Address && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember8Address.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Pin Code</h5>
               <input
                 type="text"
@@ -4553,13 +4784,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember8PinCode && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember8PinCode.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Phone (with STD)</h5>
               <input
                 type="text"
@@ -4581,13 +4812,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember8Phone && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember8Phone.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>Mobile No.</h5>
               <input
                 type="text"
@@ -4609,13 +4840,13 @@ export default function App() {
                 onInput={handleNumericInput}
               />
               {errors.committeemember8Mobile && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember8Mobile.message}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className={css["form-group"]}>
               <h5>E-Mail ID</h5>
               <input
                 type="email"
@@ -4628,7 +4859,7 @@ export default function App() {
                 })}
               />
               {errors.committeemember8Email && (
-                <span className="error">
+                <span className={css.error}>
                   {errors.committeemember8Email.message}
                 </span>
               )}
@@ -4636,10 +4867,10 @@ export default function App() {
           </div>
 
           {/* Submit Button */}
-          <div className="form-actions">
+          <div className={css["form-actions"]}>
             <button
               type="submit"
-              className="submit-button"
+              className={css["submit-button"]}
               disabled={isSubmitting}
             >
               {isSubmitting ? "Submitting..." : "Submit Form"}
@@ -4648,16 +4879,16 @@ export default function App() {
         </form>
       </div>
       {isSubmitting && (
-        <div className="spinner-container">
-          <div className="spinner"></div>
+        <div className={css["spinner-container"]}>
+          <div className={css.spinner}></div>
         </div>
       )}
       {/* Print Button (Visible after submission) */}
-      <div className="print-div">
+      <div className={css["print-div"]}>
         {isSubmitted && (
           <button
             onClick={handlePrint}
-            className="print-btn"
+            className={css["print-btn"]}
             style={{ marginTop: "20px" }}
           >
             Print

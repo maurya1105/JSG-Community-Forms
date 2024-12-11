@@ -4,11 +4,16 @@ import { useState, useEffect, useCallback } from "react";
 import { useRef } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import css from "./test.module.css";
 
-export default function Test() {
+export default function test() {
+  console.log(css);
+
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm();
   const [previews, setPreviews] = useState({}); // State for multiple previews
@@ -31,71 +36,199 @@ export default function Test() {
     region: "",
   });
 
-  // Fetches group details from the API based on provided group number
-  // Makes a GET request to /api/groups/{groupNo} endpoint
-  // Updates groupDetails state with the response data
+  // State for managing suggestions and visibility
+  const [regionSuggestions, setRegionSuggestions] = useState([]); // Holds suggestions for the region input
+  const [groupNameSuggestions, setGroupNameSuggestions] = useState([]); // Holds suggestions for the group name input
+  const [showRegionSuggestions, setShowRegionSuggestions] = useState(false); // Controls visibility of the region suggestions dropdown
+  const [showGroupNameSuggestions, setShowGroupNameSuggestions] =
+    useState(false); // Controls visibility of the group name suggestions dropdown
+
+  // Watch the current region value (react-hook-form's watch)
+  const currentRegion = watch("region"); // Tracks the selected region in real-time
+
+  // Debounce utility function to limit the frequency of API calls
+  const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout); // Clear any pending timeout
+        func(...args); // Execute the function after the specified delay
+      };
+      clearTimeout(timeout); // Reset the timeout for consecutive calls
+      timeout = setTimeout(later, wait); // Set a new timeout
+    };
+  };
+
+  // Fetch suggestions for the region input
+  const fetchRegionSuggestions = async (query) => {
+    if (query.length < 2) {
+      // Do not fetch suggestions for queries shorter than 2 characters
+      setRegionSuggestions([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/suggestions?query=${query}&type=region`
+      );
+      const result = await response.json();
+
+      if (result.success) {
+        setRegionSuggestions(result.data); // Populate suggestions list
+        setShowRegionSuggestions(true); // Show the suggestions dropdown
+      }
+    } catch (error) {
+      console.error("Error fetching region suggestions:", error);
+    }
+  };
+
+  // Fetch suggestions for the group name input (filtered by selected region)
+  const fetchGroupNameSuggestions = async (query) => {
+    if (query.length < 2) {
+      // Do not fetch suggestions for queries shorter than 2 characters
+      setGroupNameSuggestions([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
+          currentRegion || ""
+        )}`
+      );
+      const result = await response.json();
+
+      if (result.success) {
+        setGroupNameSuggestions(result.data); // Populate suggestions list
+        setShowGroupNameSuggestions(true); // Show the suggestions dropdown
+      }
+    } catch (error) {
+      console.error("Error fetching group name suggestions:", error);
+    }
+  };
+
+  // Create debounced versions of the suggestion fetch functions
+  const debouncedFetchRegionSuggestions = useCallback(
+    debounce(fetchRegionSuggestions, 300), // Debounce with a delay of 300ms
+    []
+  );
+
+  const debouncedFetchGroupNameSuggestions = useCallback(
+    debounce(fetchGroupNameSuggestions, 300), // Debounce with a delay of 300ms
+    [currentRegion] // Dependency to refresh when the region changes
+  );
+
+  // Fetch group details when a group number is selected or input
   const fetchGroupDetails = async (groupNo) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/groups/${groupNo}`
+        `http://localhost:5000/api/groups/${String(groupNo)}`
       );
       const result = await response.json();
 
       if (response.ok && result.success) {
-        // If request successful, update state with group name and region
+        // Populate form fields with the fetched group details
+        setValue("region", result.data.region || "");
+        setValue("groupName", result.data.groupName || "");
+        setValue("groupNo", String(result.data.groupNo || groupNo)); // Explicitly set group number
         setGroupDetails({
           groupName: result.data.groupName || "",
           region: result.data.region || "",
         });
       } else {
-        // Reset state if request fails
-        setGroupDetails({
-          groupName: "",
-          region: "",
-        });
+        // Clear the form fields if no group details are found
+        setValue("region", "");
+        setValue("groupName", "");
+        setValue("groupNo", "");
+        setGroupDetails({ groupName: "", region: "" });
       }
     } catch (error) {
       console.error("Error fetching group details:", error);
     }
   };
 
-  // Debounce utility function to limit rate of function calls
-  // Returns a new function that will only execute after wait time has elapsed
-  // Useful for preventing too many API calls
-  function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
-  }
+  // Handle region input changes
+  const handleRegionInputChange = (e) => {
+    const value = e.target.value;
+    setValue("region", value); // Update the form value for region
 
-  // Memoized debounced version of fetchGroupDetails
-  // Only makes API call after 500ms of no new input
-  // Prevents API spam when user is typing
-  const debouncedFetch = useCallback(
-    debounce((value) => {
-      if (value) {
-        fetchGroupDetails(value);
-      } else {
-        // Reset group details if value is empty
-        setGroupDetails({ groupName: "", region: "" });
-      }
-    }, 500),
-    []
-  );
+    // Reset group name when region changes
+    setValue("groupName", "");
+    setGroupNameSuggestions([]);
+    setShowGroupNameSuggestions(false);
 
-  // Handler for group number input changes
-  // Strips non-numeric characters and triggers debounced API fetch
-  const handleGroupNoChange = (e) => {
-    const value = e.target.value.replace(/[^0-9]/g, ""); // Remove non-numeric chars
-    setGroupNo(value);
-    debouncedFetch(value);
+    // Fetch suggestions for the updated region input
+    debouncedFetchRegionSuggestions(value);
   };
+
+  // Handle group name input changes
+  const handleGroupNameInputChange = (e) => {
+    const value = e.target.value;
+
+    if (currentRegion) {
+      // Fetch group name suggestions only if a region is selected
+      setValue("groupName", value);
+      debouncedFetchGroupNameSuggestions(value);
+    } else {
+      // Alert the user to select a region before typing a group name
+      alert("Please select a region first");
+      e.target.value = ""; // Clear the input
+    }
+  };
+
+  // Handle the selection of a region suggestion
+  const selectRegionSuggestion = (region) => {
+    setValue("region", region); // Update the form value for region
+    setShowRegionSuggestions(false); // Hide the suggestions dropdown
+
+    // Reset group name and suggestions when a region is selected
+    setValue("groupName", "");
+    setGroupNameSuggestions([]);
+  };
+
+  // Handle the selection of a group name suggestion
+  const selectGroupNameSuggestion = (suggestion) => {
+    setValue("groupName", suggestion.groupName); // Update the form value for group name
+    const groupNoString = String(suggestion.groupNo);
+    setValue("groupNo", groupNoString); // Update the form value for group number
+    setGroupNo(groupNoString);
+    fetchGroupDetails(groupNoString); // Fetch and populate group details
+    setShowGroupNameSuggestions(false); // Hide the suggestions dropdown
+  };
+
+  // Handle changes to the group number input
+  const handleGroupNoChange = (e) => {
+    const value = e.target.value.replace(/[^0-9]/g, ""); // Allow only numeric values
+    setGroupNo(value);
+    fetchGroupDetails(value); // Fetch and populate group details
+  };
+
+  // Close suggestions dropdown when clicking outside the input fields
+  const regionInputRef = useRef(null); // Ref for the region input field
+  const groupNameInputRef = useRef(null); // Ref for the group name input field
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        regionInputRef.current &&
+        !regionInputRef.current.contains(event.target)
+      ) {
+        setShowRegionSuggestions(false); // Close region suggestions
+      }
+
+      if (
+        groupNameInputRef.current &&
+        !groupNameInputRef.current.contains(event.target)
+      ) {
+        setShowGroupNameSuggestions(false); // Close group name suggestions
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside); // Add click listener
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside); // Cleanup listener
+    };
+  }, []); // Run once on component mount
 
   const onSubmit = async (data) => {
     if (!data.presidentMobile) {
@@ -185,21 +318,24 @@ export default function Test() {
   };
 
   return (
-    <div className="form-container">
+    <div className={css.test}>
       {/* Header Section */}
-      <div className="header-section">
-        <img src="/api/placeholder/200/100" alt="Logo" className="logo" />
-        <h1 className="form-title">Form B</h1>
+      <div className={css["header-section"]}>
+        <img src="/api/placeholder/200/100" alt="Logo" className={css.logo} />
+        <h1 className={css["form-title"]}>Form B</h1>
       </div>
 
       {/* Form Section */}
       <div ref={formRef}>
-        <form onSubmit={handleSubmit(onSubmit)} className="scrolling-form">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className={css["scrolling-form"]}
+        >
           {/* General Info Section */}
-          <div className="form-section">
+          <div className={css["form-section"]}>
             <h3>General Info</h3>
 
-            <div className="form-group">
+            <div className={css["form-gorup"]}>
               <h5>STD Code</h5>
               <input
                 type="text"
@@ -218,44 +354,101 @@ export default function Test() {
               )}
             </div>
 
-            <div className="form-group">
-              <h5>Region</h5>
+            {/* Region Input with Enhanced Autocomplete */}
+            <div className={css["input-wrapper"]} ref={regionInputRef}>
+              <label htmlFor="region" className="input-label">
+                Region
+              </label>
               <input
+                id="region"
                 type="text"
-                value={groupDetails.region}
-                placeholder="Region"
+                placeholder="Search for a region"
+                className="input-field"
                 {...register("region", {
-                  required: "Region is required",
+                  // required: "Region is required",
                 })}
+                onChange={handleRegionInputChange}
+                onFocus={() =>
+                  regionSuggestions.length > 0 && setShowRegionSuggestions(true)
+                }
               />
               {errors.region && (
-                <span className="text-red-500">{errors.region.message}</span>
+                <p className="error-message">{errors.region.message}</p>
+              )}
+
+              {/* Region Suggestions Dropdown */}
+              {showRegionSuggestions && regionSuggestions.length > 0 && (
+                <ul className="suggestions-dropdown">
+                  {regionSuggestions.map((suggestion, index) => (
+                    <li
+                      key={index}
+                      onClick={() => selectRegionSuggestion(suggestion.region)}
+                      className="suggestion-item"
+                    >
+                      {suggestion.region}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
 
-            <div className="form-group">
-              <h5>Group Name</h5>
+            {/* Group Name Input with Enhanced Autocomplete */}
+            <div className="input-wrapper" ref={groupNameInputRef}>
+              <label htmlFor="groupName" className="input-label">
+                Group Name
+              </label>
               <input
+                id="groupName"
                 type="text"
-                value={groupDetails.groupName}
-                placeholder="Name of the Group"
+                placeholder={
+                  currentRegion
+                    ? `Search for a group in ${currentRegion}`
+                    : "Select Region First"
+                }
+                className="input-field"
                 {...register("groupName", {
-                  required: "Group Name is required",
+                  // required: "Group Name is required",
                 })}
+                onChange={handleGroupNameInputChange}
+                onFocus={() =>
+                  groupNameSuggestions.length > 0 &&
+                  setShowGroupNameSuggestions(true)
+                }
+                disabled={!currentRegion}
               />
               {errors.groupName && (
-                <span className="text-red-500">{errors.groupName.message}</span>
+                <p className="error-message">{errors.groupName.message}</p>
+              )}
+
+              {/* Group Name Suggestions Dropdown */}
+              {showGroupNameSuggestions && groupNameSuggestions.length > 0 && (
+                <ul className="suggestions-dropdown">
+                  {groupNameSuggestions.map((suggestion, index) => (
+                    <li
+                      key={index}
+                      onClick={() => selectGroupNameSuggestion(suggestion)}
+                      className="suggestion-item"
+                    >
+                      {suggestion.groupName}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
 
-            <div className="form-group">
-              <h5>Group Number</h5>
+            {/* Group Number Input */}
+            <div className="input-wrapper">
+              <label htmlFor="groupNo" className="input-label">
+                Group Number
+              </label>
               <input
+                id="groupNo"
                 type="text"
                 value={groupNo}
                 placeholder="Enter group number"
+                className="input-field"
                 {...register("groupNo", {
-                  required: "Group No is required",
+                  // required: "Group No is required",
                   pattern: {
                     value: /^[0-9]*$/,
                     message: "Please enter only numbers",
@@ -264,7 +457,7 @@ export default function Test() {
                 onChange={handleGroupNoChange}
               />
               {errors.groupNo && (
-                <span className="text-red-500">{errors.groupNo.message}</span>
+                <p className="error-message">{errors.groupNo.message}</p>
               )}
             </div>
 
