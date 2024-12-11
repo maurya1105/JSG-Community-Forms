@@ -6,7 +6,7 @@ const forumSchema = new mongoose.Schema({
     forumName: String,
     groupNo: String,
     region: String,
-    sponsoringGroup: String,
+    groupName: String,
     address: String,
     pinCode: String,
     phone: String,
