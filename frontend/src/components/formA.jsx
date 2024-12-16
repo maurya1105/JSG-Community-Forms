@@ -283,6 +283,46 @@ export default function FormA() {
           <div className={css["form-section"]}>
             <h3>Group Details</h3>
 
+            {/* Group Number Input */}
+            <div className={css["form-group"]}>
+              <h5 htmlFor="groupNo" className={css["input-label"]}>
+                Group Number
+              </h5>
+              <input
+                id="groupNo"
+                type="text"
+                value={groupNo}
+                placeholder="Enter group number"
+                className={css["input-field"]}
+                {...register("groupNumber", {
+                  // required: "Group No is required",
+                  pattern: {
+                    value: /^[0-9]*$/,
+                    message: "Please enter only numbers",
+                  },
+                })}
+                onChange={handleGroupNoChange}
+              />
+              {errors.groupNumber && (
+                <p className={css.error}>{errors.groupNumber.message}</p>
+              )}
+            </div>
+            {/* <div className={css["form-group"]}>
+              <h5>Group Number</h5>
+              <input
+                type="text"
+                placeholder="Group Number"
+                value={groupNo}
+                {...register("groupNumber", {
+                  required: "Group Number is required",
+                })}
+                onChange={handleGroupNoChange}
+              />
+              {errors.groupNumber && (
+                <span className={css.error}>{errors.groupNumber.message}</span>
+              )}
+            </div> */}
+
             {/* Group Name Input with Enhanced Autocomplete */}
             <div className={css["form-group"]} ref={groupNameInputRef}>
               <h5 htmlFor="groupName" className={css["input-label"]}>
@@ -334,49 +374,21 @@ export default function FormA() {
               )}
             </div> */}
 
-            {/* Group Number Input */}
-            <div className={css["form-group"]}>
-              <h5 htmlFor="groupNo" className={css["input-label"]}>
-                Group Number
-              </h5>
-              <input
-                id="groupNo"
+            <div className={css["form-group full-row"]}>
+              <h5>Group Address</h5>
+              <textarea
                 type="text"
-                value={groupNo}
-                placeholder="Enter group number"
-                className={css["input-field"]}
-                {...register("groupNumber", {
-                  // required: "Group No is required",
-                  pattern: {
-                    value: /^[0-9]*$/,
-                    message: "Please enter only numbers",
-                  },
-                })}
-                onChange={handleGroupNoChange}
+                placeholder="Address"
+                {...register("groupAddress", {})}
               />
-              {errors.groupNumber && (
-                <p className={css.error}>{errors.groupNumber.message}</p>
+              {errors.groupAddress && (
+                <span className={css.error}>{errors.groupAddress.message}</span>
               )}
             </div>
-            {/* <div className={css["form-group"]}>
-              <h5>Group Number</h5>
-              <input
-                type="text"
-                placeholder="Group Number"
-                value={groupNo}
-                {...register("groupNumber", {
-                  required: "Group Number is required",
-                })}
-                onChange={handleGroupNoChange}
-              />
-              {errors.groupNumber && (
-                <span className={css.error}>{errors.groupNumber.message}</span>
-              )}
-            </div> */}
 
-            <div className={css["form-group"]}>
+            {/* <div className={css["form-group"]}>
               <h5>Group Address</h5>
-              <input
+              <textarea
                 type="text"
                 placeholder="Address"
                 {...register("groupAddress", {
@@ -386,7 +398,7 @@ export default function FormA() {
               {errors.groupAddress && (
                 <span className={css.error}>{errors.groupAddress.message}</span>
               )}
-            </div>
+            </div> */}
 
             <div className={css["form-group"]}>
               <h5>Predident Mobile No.</h5>
@@ -394,7 +406,7 @@ export default function FormA() {
                 type="text"
                 placeholder="Mobile No."
                 {...register("presidentMobileNumber", {
-                  required: "Group Number is required",
+                  required: "This field is required",
                 })}
               />
               {errors.presidentMobileNumber && (
@@ -410,7 +422,7 @@ export default function FormA() {
                 type="text"
                 placeholder="Mobile No."
                 {...register("secretaryMobileNumber", {
-                  required: "Group Number is required",
+                  required: "This field is required",
                 })}
               />
               {errors.secretaryMobileNumber && (
@@ -426,7 +438,7 @@ export default function FormA() {
                 type="text"
                 placeholder="Mobile No."
                 {...register("treasurerMobileNumber", {
-                  required: "Group Number is required",
+                  required: "This field is required",
                 })}
               />
               {errors.treasurerMobileNumber && (
@@ -461,138 +473,140 @@ export default function FormA() {
           </div>
 
           {/* Contribution Payable */}
-          <h3>Contribution Payable</h3>
+          <div className={css["contribution-details"]}>
+            <h3>Contribution Payable</h3>
 
-          {/* Number of Couple Members */}
-          <div className={css["form-row"]}>
-            <div className={css["input-group"]}>
-              <h5>Number of Couple Members</h5>
-              <input
-                type="number"
-                placeholder="Couple Members"
-                {...register("coupleMembers", {
-                  required: "Couple Members is required",
-                })}
-              />
-              {errors.coupleMembers && (
-                <span className={css.error}>
-                  {errors.coupleMembers.message}
-                </span>
-              )}
+            {/* Number of Couple Members */}
+            <div className={css["form-row"]}>
+              <div className={css["input-group"]}>
+                <h5>Number of Couple Members</h5>
+                <input
+                  type="number"
+                  placeholder="Couple Members"
+                  {...register("coupleMembers", {
+                    required: "Couple Members is required",
+                  })}
+                />
+                {errors.coupleMembers && (
+                  <span className={css.error}>
+                    {errors.coupleMembers.message}
+                  </span>
+                )}
+              </div>
+              <div className={css["amount-group"]}>
+                <h5>Couple Contribution</h5>
+                <p>₹{coupleContribution}</p>
+              </div>
             </div>
-            <div className={css["amount-group"]}>
-              <h5>Couple Contribution</h5>
-              <p>₹{coupleContribution}</p>
-            </div>
-          </div>
 
-          {/* Number of Single Members */}
-          <div className={css["form-row"]}>
-            <div className={css["input-group"]}>
-              <h5>Number of Single Members</h5>
-              <input
-                type="number"
-                placeholder="Single Members"
-                {...register("singleMembers", {
-                  required: "Single Members is required",
-                })}
-              />
-              {errors.coupleMembers && (
-                <span className={css.error}>
-                  {errors.coupleMembers.message}
-                </span>
-              )}
+            {/* Number of Single Members */}
+            <div className={css["form-row"]}>
+              <div className={css["input-group"]}>
+                <h5>Number of Single Members</h5>
+                <input
+                  type="number"
+                  placeholder="Single Members"
+                  {...register("singleMembers", {
+                    required: "Single Members is required",
+                  })}
+                />
+                {errors.coupleMembers && (
+                  <span className={css.error}>
+                    {errors.coupleMembers.message}
+                  </span>
+                )}
+              </div>
+              <div className={css["amount-group"]}>
+                <h5>Single Contribution</h5>
+                <p>₹{singleContribution}</p>
+              </div>
             </div>
-            <div className={css["amount-group"]}>
-              <h5>Single Contribution</h5>
-              <p>₹{singleContribution}</p>
-            </div>
-          </div>
 
-          {/* Previous Dues */}
-          <div className={css["form-row"]}>
-            <div className={css["input-group"]}>
-              <h5>Previous Dues</h5>
-              <input
-                type="number"
-                placeholder="Previous Dues"
-                {...register("previousDues")}
-              />
+            {/* Previous Dues */}
+            <div className={css["form-row"]}>
+              <div className={css["input-group"]}>
+                <h5>Previous Dues</h5>
+                <input
+                  type="number"
+                  placeholder="Previous Dues"
+                  {...register("previousDues")}
+                />
+              </div>
+              <div className={css["amount-group"]}>
+                <h5>Previous Dues Amount</h5>
+                <p>₹{previousDues}</p>
+              </div>
             </div>
-            <div className={css["amount-group"]}>
-              <h5>Previous Dues Amount</h5>
-              <p>₹{previousDues}</p>
-            </div>
-          </div>
 
-          {/* Gross Total */}
-          <div className={css["form-row"]}>
-            <div className={css["text-group"]}>
-              <h5>Gross Total</h5>
+            {/* Gross Total */}
+            <div className={css["form-row"]}>
+              <div className={css["text-group"]}>
+                <h5>Gross Total</h5>
+              </div>
+              <div className={css["amount-group"]}>
+                <h5>₹{grossTotal}</h5>
+              </div>
             </div>
-            <div className={css["amount-group"]}>
-              <h5>₹{grossTotal}</h5>
-            </div>
-          </div>
 
-          {/* GST */}
-          <div className={css["form-row"]}>
-            <div className={css["text-group"]}>
-              <h5>GST @ 18%</h5>
+            {/* GST */}
+            <div className={css["form-row"]}>
+              <div className={css["text-group"]}>
+                <h5>GST @ 18%</h5>
+              </div>
+              <div className={css["amount-group"]}>
+                <h5>₹{gstAmount}</h5>
+              </div>
             </div>
-            <div className={css["amount-group"]}>
-              <h5>₹{gstAmount}</h5>
-            </div>
-          </div>
 
-          {/* Grand Total */}
-          <div className={css["form-row"]}>
-            <div className={css["text-group"]}>
-              <h5>Grand Total</h5>
+            {/* Grand Total */}
+            <div className={css["form-row"]}>
+              <div className={css["text-group"]}>
+                <h5>Grand Total</h5>
+              </div>
+              <div className={css["amount-group"]}>
+                <h5>₹{grandTotal}</h5>
+              </div>
             </div>
-            <div className={css["amount-group"]}>
-              <h5>₹{grandTotal}</h5>
-            </div>
-          </div>
 
-          {/* Less Paid / Credit with JSGIF */}
-          <div className={css["form-row"]}>
-            <div className={css["input-group"]}>
-              <h5>Less Paid / Credit with JSGIF</h5>
-              <input
-                type="number"
-                placeholder="Less Paid / Credit"
-                {...register("lessPaid")}
-              />
+            {/* Less Paid / Credit with JSGIF */}
+            <div className={css["form-row"]}>
+              <div className={css["input-group"]}>
+                <h5>Less Paid / Credit with JSGIF</h5>
+                <input
+                  type="number"
+                  placeholder="Less Paid / Credit"
+                  {...register("lessPaid")}
+                />
+              </div>
+              <div className={css["amount-group"]}>
+                <h5>Credit Amount</h5>
+                <p>₹{creditWithJSGIF}</p>
+              </div>
+              <div className={css["form-group"]}>
+                <h5>Receipt No.</h5>
+                <input
+                  type="text"
+                  placeholder="Receipt No."
+                  {...register("receiptNumber", {
+                    required: "Receipt Number is required",
+                  })}
+                />
+                {errors.receiptNumber && (
+                  <span className={css.error}>
+                    {errors.receiptNumber.message}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className={css["amount-group"]}>
-              <h5>Credit Amount</h5>
-              <p>₹{creditWithJSGIF}</p>
-            </div>
-            <div className={css["form-group"]}>
-              <h5>Receipt No.</h5>
-              <input
-                type="text"
-                placeholder="Receipt No."
-                {...register("receiptNumber", {
-                  required: "Receipt Number is required",
-                })}
-              />
-              {errors.receiptNumber && (
-                <span className={css.error}>
-                  {errors.receiptNumber.message}
-                </span>
-              )}
-            </div>
-          </div>
 
-          {/* Net Payable */}
-          <div className={css["form-row"]}>
-            <div className={css["text-group"]}>
-              <h5>Net Payable</h5>
-            </div>
-            <div className={css["amount-group"]}>
-              <h5>₹{netPayable}</h5>
+            {/* Net Payable */}
+            <div className={css["form-row"]}>
+              <div className={css["text-group"]}>
+                <h5>Net Payable</h5>
+              </div>
+              <div className={css["amount-group"]}>
+                <h5>₹{netPayable}</h5>
+              </div>
             </div>
           </div>
 
@@ -663,18 +677,20 @@ export default function FormA() {
               </div>
             </div>
 
-            <div className={css["input-group"]}>
-              <h5>Branch</h5>
-              <input
-                type="text"
-                placeholder="Bank Branch"
-                {...register("bankBranch", {
-                  // required: "Branch is required",
-                })}
-              />
-              {errors.bankBranch && (
-                <span className={css.error}>{errors.bankBranch.message}</span>
-              )}
+            <div className={css["payment-row"]}>
+              <div className={css["input-group"]}>
+                <h5>Branch</h5>
+                <input
+                  type="text"
+                  placeholder="Bank Branch"
+                  {...register("bankBranch", {
+                    // required: "Branch is required",
+                  })}
+                />
+                {errors.bankBranch && (
+                  <span className={css.error}>{errors.bankBranch.message}</span>
+                )}
+              </div>
             </div>
           </div>
 

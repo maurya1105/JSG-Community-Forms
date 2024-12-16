@@ -557,25 +557,28 @@ export default function App() {
           <div className={css["form-section"]}>
             <h3>General Info</h3>
 
+            {/* Group Number Input */}
             <div className={css["form-group"]}>
-              <h5>STD Code</h5>
+              <h5 htmlFor="groupNo" className={css["input-label"]}>
+                Group Number
+              </h5>
               <input
+                id="groupNo"
                 type="text"
-                placeholder="Std code"
-                {...register("stdCode", {
-                  maxLength: {
-                    value: 10,
-                    message: "STD Code cannot exceed 10 digits",
-                  },
+                value={groupNo}
+                placeholder="Enter group number"
+                className={css["input-field"]}
+                {...register("groupNo", {
+                  // required: "Group No is required",
                   pattern: {
-                    value: /^[0-9]*$/i,
+                    value: /^[0-9]*$/,
                     message: "Please enter only numbers",
                   },
                 })}
-                onInput={handleNumericInput}
+                onChange={handleGroupNoChange}
               />
-              {errors.stdCode && (
-                <span className={css.error}>{errors.stdCode.message}</span>
+              {errors.groupNo && (
+                <p className={css.error}>{errors.groupNo.message}</p>
               )}
             </div>
 
@@ -614,34 +617,6 @@ export default function App() {
                     </li>
                   ))}
                 </ul>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Date of Inaugration</h5>
-              <input
-                type="date"
-                placeholder="Date of Inaugration"
-                {...register("dateOfInaugration", {})}
-              />
-              {errors.dateOfInaugration && (
-                <span className={css.error}>
-                  {errors.dateOfInaugration.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Date of Charter</h5>
-              <input
-                type="date"
-                placeholder="Date of Charter"
-                {...register("dateOfCharter", {})}
-              />
-              {errors.dateOfCharter && (
-                <span className={css.error}>
-                  {errors.dateOfCharter.message}
-                </span>
               )}
             </div>
 
@@ -701,28 +676,53 @@ export default function App() {
               )}
             </div>
 
-            {/* Group Number Input */}
             <div className={css["form-group"]}>
-              <h5 htmlFor="groupNo" className={css["input-label"]}>
-                Group Number
-              </h5>
+              <h5>Date of Inaugration</h5>
               <input
-                id="groupNo"
+                type="date"
+                placeholder="Date of Inaugration"
+                {...register("dateOfInaugration", {})}
+              />
+              {errors.dateOfInaugration && (
+                <span className={css.error}>
+                  {errors.dateOfInaugration.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Date of Charter</h5>
+              <input
+                type="date"
+                placeholder="Date of Charter"
+                {...register("dateOfCharter", {})}
+              />
+              {errors.dateOfCharter && (
+                <span className={css.error}>
+                  {errors.dateOfCharter.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>STD Code</h5>
+              <input
                 type="text"
-                value={groupNo}
-                placeholder="Enter group number"
-                className={css["input-field"]}
-                {...register("groupNo", {
-                  // required: "Group No is required",
+                placeholder="Std code"
+                {...register("stdCode", {
+                  maxLength: {
+                    value: 10,
+                    message: "STD Code cannot exceed 10 digits",
+                  },
                   pattern: {
-                    value: /^[0-9]*$/,
+                    value: /^[0-9]*$/i,
                     message: "Please enter only numbers",
                   },
                 })}
-                onChange={handleGroupNoChange}
+                onInput={handleNumericInput}
               />
-              {errors.groupNo && (
-                <p className={css.error}>{errors.groupNo.message}</p>
+              {errors.stdCode && (
+                <span className={css.error}>{errors.stdCode.message}</span>
               )}
             </div>
 
