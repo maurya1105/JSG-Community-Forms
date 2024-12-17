@@ -5,17 +5,24 @@ const Home = () => {
   const navigate = useNavigate();
 
   return (
-    <div style={{ textAlign: "center", marginTop: "50px", color: "#FACE1D" }}>
+    <div
+      style={{
+        textAlign: "center",
+        marginTop: "50px",
+        color: "#FACE1D",
+        backgroundColor: "#3f0986",
+      }}
+    >
       <h1>Select a Form</h1>
       <div>
-        <button onClick={() => navigate("/form-a")} style={styles.button}>
+        <button onClick={() => navigate("/form-a-data")} style={styles.button}>
           Form A
         </button>
-        <button onClick={() => navigate("/form-b")} style={styles.button}>
+        <button onClick={() => navigate("/form-b-data")} style={styles.button}>
           Form B
         </button>
         <button onClick={() => navigate("/test")} style={styles.button}>
-          test
+          Test
         </button>
       </div>
     </div>
