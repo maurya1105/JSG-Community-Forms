@@ -44,7 +44,7 @@ const contributionSchema = new mongoose.Schema({
   presidentMobileNumber: {
     type: String,
     required: true,
-    match: /^\d{10,12}$/ // Validates phone numbers between 10-12 digits
+    // match: /^\d{10,12}$/ // Validates phone numbers between 10-12 digits
   },
   previousDues: {
     type: String,
@@ -53,7 +53,7 @@ const contributionSchema = new mongoose.Schema({
   secretaryMobileNumber: {
     type: String,
     required: true,
-    match: /^\d{10,12}$/
+    // match: /^\d{10,12}$/
   },
   singleContribution: {
     type: Number,
@@ -66,7 +66,7 @@ const contributionSchema = new mongoose.Schema({
   treasurerMobileNumber: {
     type: String,
     required: true,
-    match: /^\d{10,12}$/
+    // match: /^\d{10,12}$/
   },
   submissionDate: {
     type: Date,
