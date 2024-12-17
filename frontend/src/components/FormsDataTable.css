@@ -1,0 +1,129 @@
+/* FormADataTable.css */
+
+body {
+  background-color: #face1d; /* Set background color of the page */
+}
+
+.datatable-container {
+  margin: 0 auto;
+  padding: 20px;
+  max-width: 90%;
+}
+
+.datatable-title {
+  color: #face1d;
+}
+
+.new-form-button {
+  display: block;
+  margin: 0 auto 20px auto;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.new-form-button:hover {
+  background-color: #0056b3;
+}
+
+.datatable-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+div.dt-container div.dt-layout-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin: 0.75em 0;
+}
+
+.dt-search {
+  margin: 15px;
+  display: flex;
+  align-items: center;
+  /* margin-left: 0px; */
+  flex-direction: row;
+  justify-content: center;
+  gap: 10px;
+}
+
+div.dt-container .dt-search input {
+  width: 60%;
+  margin: 0 auto;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  padding: 5px;
+  background-color: transparent;
+  color: inherit;
+  /* margin-left: 3px; */
+}
+
+div.dt-container div.dt-layout-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin: 0.75em 0;
+  color: #f2f2f2;
+  font-size: large;
+}
+
+.styled-datatable {
+  width: 100%;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.styled-datatable th,
+.styled-datatable td {
+  text-align: center;
+  vertical-align: middle;
+  border: 1px solid black;
+}
+
+.styled-datatable th {
+  background-color: #f2f2f2;
+  color: black;
+}
+
+table.dataTable thead > tr > th.dt-orderable-asc,
+table.dataTable thead > tr > th.dt-orderable-desc,
+table.dataTable thead > tr > td.dt-orderable-asc,
+table.dataTable thead > tr > td.dt-orderable-desc {
+  cursor: pointer;
+  text-align: center;
+}
+
+.styled-datatable tr:nth-child(even) {
+  background-color: #3f0986;
+  color: #face1d;
+}
+
+.styled-datatable tr:nth-child(odd) {
+  background-color: #2c0b57;
+  color: #face1d;
+}
+
+.dataTables_info {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.dataTables_paginate {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.dt-buttons {
+  text-align: center;
+  margin-top: 20px;
+}
