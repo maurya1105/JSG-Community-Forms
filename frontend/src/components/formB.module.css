@@ -8,6 +8,7 @@ body {
     font-size: 12px;
     margin-top: 5px;
   }
+  
   .form-container {
     font-family: Arial, sans-serif;
     width: 60%;
@@ -54,7 +55,7 @@ body {
   
   .header-section .form-title {
     font-size: 28px;
-    color: #ffffff;
+    color: #face1d;
     margin-top: 25px;
     font-weight: bold;
   }
@@ -292,7 +293,6 @@ body {
   .input-label {
     display: block;
     margin-bottom: 5px;
-    font-weight: bold;
     color: #3f0986;
   }
   
@@ -337,12 +337,6 @@ body {
   
   .suggestion-item:hover {
     background-color: blue;
-  }
-  
-  .error-message {
-    color: #d9534f;
-    font-size: 0.8em;
-    margin-top: 5px;
   }
 
   .suggestions-dropdown{
