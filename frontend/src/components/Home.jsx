@@ -15,10 +15,10 @@ const Home = () => {
     >
       <h1>Select a Form</h1>
       <div>
-        <button onClick={() => navigate("/form-a-data")} style={styles.button}>
+        <button onClick={() => navigate("/form-a")} style={styles.button}>
           Form A
         </button>
-        <button onClick={() => navigate("/form-b-data")} style={styles.button}>
+        <button onClick={() => navigate("/form-b")} style={styles.button}>
           Form B
         </button>
         <button onClick={() => navigate("/test")} style={styles.button}>
