@@ -34,28 +34,56 @@ export default function FormA() {
   const [groupNo, setGroupNo] = useState(""); // For tracking the group number input
   const [groupDetails, setGroupDetails] = useState({
     groupName: "",
+    region: "",
   });
 
   // State for managing suggestions and visibility
-  // State for managing suggestions and visibility
-  const [groupNameSuggestions, setGroupNameSuggestions] = useState([]);
+  const [regionSuggestions, setRegionSuggestions] = useState([]); // Holds suggestions for the region input
+  const [groupNameSuggestions, setGroupNameSuggestions] = useState([]); // Holds suggestions for the group name input
+  const [showRegionSuggestions, setShowRegionSuggestions] = useState(false); // Controls visibility of the region suggestions dropdown
   const [showGroupNameSuggestions, setShowGroupNameSuggestions] =
-    useState(false);
+    useState(false); // Controls visibility of the group name suggestions dropdown
+
+  // Watch the current region value (react-hook-form's watch)
+  const currentRegion = watch("region"); // Tracks the selected region in real-time
 
   // Debounce utility function to limit the frequency of API calls
   const debounce = (func, wait) => {
     let timeout;
     return function executedFunction(...args) {
       const later = () => {
-        clearTimeout(timeout);
-        func(...args);
+        clearTimeout(timeout); // Clear any pending timeout
+        func(...args); // Execute the function after the specified delay
       };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
+      clearTimeout(timeout); // Reset the timeout for consecutive calls
+      timeout = setTimeout(later, wait); // Set a new timeout
     };
   };
 
-  // Fetch suggestions for the group name input (no region filtering)
+  // Fetch suggestions for the region input
+  const fetchRegionSuggestions = async (query) => {
+    if (query.length < 2) {
+      // Do not fetch suggestions for queries shorter than 2 characters
+      setRegionSuggestions([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/suggestions?query=${query}&type=region`
+      );
+      const result = await response.json();
+
+      if (result.success) {
+        setRegionSuggestions(result.data); // Populate suggestions list
+        setShowRegionSuggestions(true); // Show the suggestions dropdown
+      }
+    } catch (error) {
+      console.error("Error fetching region suggestions:", error);
+    }
+  };
+
+  // Fetch suggestions for the group name input (filtered by selected region)
   const fetchGroupNameSuggestions = async (query) => {
     if (query.length < 2) {
       // Do not fetch suggestions for queries shorter than 2 characters
@@ -65,93 +93,198 @@ export default function FormA() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/suggestions?query=${query}&type=groupName`
+        `http://localhost:5000/api/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
+          currentRegion || ""
+        )}`
       );
       const result = await response.json();
 
       if (result.success) {
-        setGroupNameSuggestions(result.data);
-        setShowGroupNameSuggestions(true);
+        setGroupNameSuggestions(result.data); // Populate suggestions list
+        setShowGroupNameSuggestions(true); // Show the suggestions dropdown
       }
     } catch (error) {
       console.error("Error fetching group name suggestions:", error);
     }
   };
 
-  // Create debounced version of the suggestion fetch function
-  const debouncedFetchGroupNameSuggestions = useCallback(
-    debounce(fetchGroupNameSuggestions, 300),
+  // Create debounced versions of the suggestion fetch functions
+  const debouncedFetchRegionSuggestions = useCallback(
+    debounce(fetchRegionSuggestions, 300), // Debounce with a delay of 300ms
     []
+  );
+
+  const debouncedFetchGroupNameSuggestions = useCallback(
+    debounce(fetchGroupNameSuggestions, 300), // Debounce with a delay of 300ms
+    [currentRegion] // Dependency to refresh when the region changes
   );
 
   // Fetch group details when a group number is selected or input
   const fetchGroupDetails = async (groupNo) => {
+    // If group number is empty, reset all related fields
+    if (!groupNo) {
+      setValue("region", "");
+      setValue("groupName", "");
+      setValue("previousDues", 0);
+      setValue("lessPaid", 0);
+
+      setGroupDetails({
+        groupName: "",
+        region: "",
+        previousDues: 0,
+        lessPaid: 0,
+      });
+
+      return; // Exit the function early
+    }
+
     try {
-      const response = await fetch(
+      // First, fetch group details
+      const groupResponse = await fetch(
         `http://localhost:5000/api/groups/${String(groupNo)}`
       );
-      const result = await response.json();
+      const groupResult = await groupResponse.json();
 
-      if (response.ok && result.success) {
-        // Populate form fields with the fetched group details
-        setValue("groupName", result.data.groupName || "");
-        setValue("groupNo", String(result.data.groupNo || groupNo));
+      // Fetch financial details
+      const financialResponse = await fetch(
+        `http://localhost:5000/api/financials/${String(groupNo)}`
+      );
+      const financialResult = await financialResponse.json();
+
+      if (groupResult.success && financialResult.success) {
+        // Populate group details
+        setValue("region", groupResult.data.region || "");
+        setValue("groupName", groupResult.data.groupName || "");
+        setValue("groupNo", String(groupResult.data.groupNo || groupNo));
+
+        // Populate financial details
+        const previousDuesValue = financialResult.data.previousDues || 0;
+        const lessPaidValue = financialResult.data.lessPaid || 0;
+
+        // Explicitly set these values to ensure they're included in form submission
+        setValue("previousDues", previousDuesValue);
+        setValue("lessPaid", lessPaidValue);
+
         setGroupDetails({
-          groupName: result.data.groupName || "",
+          groupName: groupResult.data.groupName || "",
+          region: groupResult.data.region || "",
+          previousDues: previousDuesValue,
+          lessPaid: lessPaidValue,
         });
       } else {
-        // Clear the form fields if no group details are found
+        // Reset all fields if no details found
+        setValue("region", "");
         setValue("groupName", "");
         setValue("groupNo", "");
-        setGroupDetails({ groupName: "" });
+        setValue("previousDues", 0);
+        setValue("lessPaid", 0);
+
+        setGroupDetails({
+          groupName: "",
+          region: "",
+          previousDues: 0,
+          lessPaid: 0,
+        });
       }
     } catch (error) {
       console.error("Error fetching group details:", error);
+
+      // Instead of showing an alert, silently handle the error
+      // Reset fields to a clean state
+      setValue("previousDues", 0);
+      setValue("lessPaid", 0);
     }
+  };
+
+  // Handle region input changes
+  const handleRegionInputChange = (e) => {
+    const value = e.target.value;
+    setValue("region", value); // Update the form value for region
+
+    // Reset group name when region changes
+    setValue("groupName", "");
+    setGroupNameSuggestions([]);
+    setShowGroupNameSuggestions(false);
+
+    // Fetch suggestions for the updated region input
+    debouncedFetchRegionSuggestions(value);
   };
 
   // Handle group name input changes
   const handleGroupNameInputChange = (e) => {
     const value = e.target.value;
-    setValue("groupName", value);
-    debouncedFetchGroupNameSuggestions(value);
+
+    if (currentRegion) {
+      // Fetch group name suggestions only if a region is selected
+      setValue("groupName", value);
+      debouncedFetchGroupNameSuggestions(value);
+    } else {
+      // Alert the user to select a region before typing a group name
+      alert("Please select a region first");
+      e.target.value = ""; // Clear the input
+    }
+  };
+
+  // Handle the selection of a region suggestion
+  const selectRegionSuggestion = (region) => {
+    setValue("region", region); // Update the form value for region
+    setShowRegionSuggestions(false); // Hide the suggestions dropdown
+
+    // Reset group name and suggestions when a region is selected
+    setValue("groupName", "");
+    setGroupNameSuggestions([]);
   };
 
   // Handle the selection of a group name suggestion
   const selectGroupNameSuggestion = (suggestion) => {
-    setValue("groupName", suggestion.groupName);
+    setValue("groupName", suggestion.groupName); // Update the form value for group name
     const groupNoString = String(suggestion.groupNo);
-    setValue("groupNo", groupNoString);
+    setValue("groupNo", groupNoString); // Update the form value for group number
     setGroupNo(groupNoString);
-    fetchGroupDetails(groupNoString);
-    setShowGroupNameSuggestions(false);
+    fetchGroupDetails(groupNoString); // Fetch and populate group details
+    setShowGroupNameSuggestions(false); // Hide the suggestions dropdown
   };
 
   // Handle changes to the group number input
   const handleGroupNoChange = (e) => {
     const value = e.target.value.replace(/[^0-9]/g, ""); // Allow only numeric values
     setGroupNo(value);
-    fetchGroupDetails(value);
+
+    // Only fetch details if value is not empty
+    if (value) {
+      fetchGroupDetails(value);
+    } else {
+      // Reset fields when group number is cleared
+      fetchGroupDetails(null);
+    }
   };
 
   // Close suggestions dropdown when clicking outside the input fields
-  const groupNameInputRef = useRef(null);
+  const regionInputRef = useRef(null); // Ref for the region input field
+  const groupNameInputRef = useRef(null); // Ref for the group name input field
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
+        regionInputRef.current &&
+        !regionInputRef.current.contains(event.target)
+      ) {
+        setShowRegionSuggestions(false); // Close region suggestions
+      }
+
+      if (
         groupNameInputRef.current &&
         !groupNameInputRef.current.contains(event.target)
       ) {
-        setShowGroupNameSuggestions(false);
+        setShowGroupNameSuggestions(false); // Close group name suggestions
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside); // Add click listener
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside); // Cleanup listener
     };
-  }, []);
+  }, []); // Run once on component mount
 
   // Calculate the contribution dynamically
   useEffect(() => {
@@ -213,6 +346,8 @@ export default function FormA() {
   const onSubmit = async (data) => {
     console.log("Final Submitted Data: ", {
       ...data,
+      previousDues: data.previousDues || 0,
+      lessPaid: data.lessPaid || 0,
       coupleContribution,
       singleContribution,
       grossTotal,
@@ -224,6 +359,8 @@ export default function FormA() {
     //api call to backend
     const response = await axios.post(`${remoteUrl}/api/contributions`, {
       ...data,
+      previousDues: data.previousDues || 0,
+      lessPaid: data.lessPaid || 0,
       coupleContribution,
       singleContribution,
       grossTotal,
@@ -294,7 +431,7 @@ export default function FormA() {
                 value={groupNo}
                 placeholder="Enter group number"
                 className={css["input-field"]}
-                {...register("groupNumber", {
+                {...register("groupNo", {
                   // required: "Group No is required",
                   pattern: {
                     value: /^[0-9]*$/,
@@ -303,25 +440,48 @@ export default function FormA() {
                 })}
                 onChange={handleGroupNoChange}
               />
-              {errors.groupNumber && (
-                <p className={css.error}>{errors.groupNumber.message}</p>
+              {errors.groupNo && (
+                <p className={css.error}>{errors.groupNo.message}</p>
               )}
             </div>
-            {/* <div className={css["form-group"]}>
-              <h5>Group Number</h5>
+
+            {/* Region Input with Enhanced Autocomplete */}
+            <div className={css["form-group"]} ref={regionInputRef}>
+              <h5 htmlFor="region" className={css["input-label"]}>
+                Region
+              </h5>
               <input
+                id="region"
                 type="text"
-                placeholder="Group Number"
-                value={groupNo}
-                {...register("groupNumber", {
-                  required: "Group Number is required",
+                placeholder="Search for a region"
+                className={css["input-field"]}
+                {...register("region", {
+                  // required: "Region is required",
                 })}
-                onChange={handleGroupNoChange}
+                onChange={handleRegionInputChange}
+                onFocus={() =>
+                  regionSuggestions.length > 0 && setShowRegionSuggestions(true)
+                }
               />
-              {errors.groupNumber && (
-                <span className={css.error}>{errors.groupNumber.message}</span>
+              {errors.region && (
+                <p className={css.error}>{errors.region.message}</p>
               )}
-            </div> */}
+
+              {/* Region Suggestions Dropdown */}
+              {showRegionSuggestions && regionSuggestions.length > 0 && (
+                <ul className={css["suggestions-dropdown"]}>
+                  {regionSuggestions.map((suggestion, index) => (
+                    <li
+                      key={index}
+                      onClick={() => selectRegionSuggestion(suggestion.region)}
+                      className={css["suggestion-item"]}
+                    >
+                      {suggestion.region}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             {/* Group Name Input with Enhanced Autocomplete */}
             <div className={css["form-group"]} ref={groupNameInputRef}>
@@ -331,14 +491,21 @@ export default function FormA() {
               <input
                 id="groupName"
                 type="text"
-                placeholder="Search for a group"
+                placeholder={
+                  currentRegion
+                    ? `Search for a group in ${currentRegion}`
+                    : "Select Region First"
+                }
                 className={css["input-field"]}
-                {...register("groupName")}
+                {...register("groupName", {
+                  // required: "Group Name is required",
+                })}
                 onChange={handleGroupNameInputChange}
                 onFocus={() =>
                   groupNameSuggestions.length > 0 &&
                   setShowGroupNameSuggestions(true)
                 }
+                disabled={!currentRegion}
               />
               {errors.groupName && (
                 <p className={css.error}>{errors.groupName.message}</p>
@@ -359,20 +526,6 @@ export default function FormA() {
                 </ul>
               )}
             </div>
-            {/* <div className={css["form-group"]}>
-              <h5>Name of the Group</h5>
-              <input
-                type="text"
-                placeholder="Name of the Group"
-                defaultValue={groupDetails.groupName}
-                {...register("groupName", {
-                  required: "Group name is required",
-                })}
-              />
-              {errors.groupName && (
-                <span className={css.error}>{errors.groupName.message}</span>
-              )}
-            </div> */}
 
             <div className={css["form-group full-row"]}>
               <h5>Group Address</h5>
@@ -385,20 +538,6 @@ export default function FormA() {
                 <span className={css.error}>{errors.groupAddress.message}</span>
               )}
             </div>
-
-            {/* <div className={css["form-group"]}>
-              <h5>Group Address</h5>
-              <textarea
-                type="text"
-                placeholder="Address"
-                {...register("groupAddress", {
-                  required: "Group Address is required",
-                })}
-              />
-              {errors.groupAddress && (
-                <span className={css.error}>{errors.groupAddress.message}</span>
-              )}
-            </div> */}
 
             <div className={css["form-group"]}>
               <h5>Predident Mobile No.</h5>
@@ -530,6 +669,7 @@ export default function FormA() {
                   type="number"
                   placeholder="Previous Dues"
                   {...register("previousDues")}
+                  disabled
                 />
               </div>
               <div className={css["amount-group"]}>
@@ -576,6 +716,7 @@ export default function FormA() {
                   type="number"
                   placeholder="Less Paid / Credit"
                   {...register("lessPaid")}
+                  disabled
                 />
               </div>
               <div className={css["amount-group"]}>
