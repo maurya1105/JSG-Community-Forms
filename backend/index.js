@@ -62,6 +62,7 @@ mongoose.connect(process.env.MONGODB_URI)
 const Contribution = require('./models/formA_schema'); // Import the formA model
 const Forum = require('./models/formB_schema'); // Import the formB model
 const Group = require('./models/group_schema'); // Import the Group model
+const Financial = require('./models/financial_schema'); // Import the Group model
 
 // GET endpoint for autocomplete suggestions
 app.get('/api/suggestions', async (req, res) => {
@@ -164,6 +165,43 @@ app.get('/api/groups/:groupNo', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch group',
+      error: error.message
+    });
+  }
+});
+
+// GET endpoint to fetch financial details by group number
+app.get('/api/financials/:groupNo', async (req, res) => {
+  try {
+    const groupNo = req.params.groupNo;
+
+    // Find the financial record by group number
+    const financialDetails = await Financial.findOne({ groupNo });
+
+    if (financialDetails) {
+      // If financial details found, return successful response
+      res.json({
+        success: true,
+        data: {
+          groupNo: financialDetails.groupNo,
+          groupName: financialDetails.groupName,
+          previousDues: financialDetails.previousDues,
+          lessPaid: financialDetails.lessPaid
+        }
+      });
+    } else {
+      // If no financial details found for the group number
+      res.status(404).json({
+        success: false,
+        message: 'No financial details found for this group number'
+      });
+    }
+  } catch (error) {
+    // Handle any server errors
+    console.error('Error fetching financial details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching financial details',
       error: error.message
     });
   }
