@@ -25,7 +25,7 @@ const contributionSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  groupNumber: {
+  groupNo: {
     type: String,
     required: true
   },
