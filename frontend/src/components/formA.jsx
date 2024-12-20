@@ -5,6 +5,31 @@ import axios from "axios";
 import { remoteUrl } from "../api.config";
 import css from "./formA.module.css";
 
+// Updated validation patterns
+const validationPatterns = {
+  numeric: {
+    value: /^\d+$/,
+    message: "Please enter only numbers",
+  },
+  alphabetsOnly: {
+    value: /^[A-Za-z\s]*$/,
+    message: "Please enter only alphabets",
+  },
+  mobile: {
+    value: /^[+()0-9]*$/,
+    message: "Please enter a valid phone number",
+  },
+  decimal: {
+    value: /^\d{1,6}(\.\d{1,2})?$/,
+    message: "Please enter a valid number with up to 2 decimal places",
+  },
+};
+
+// Required field indicator component
+const RequiredField = () => (
+  <span style={{ color: "red", marginLeft: "4px" }}>*</span>
+);
+
 export default function FormA() {
   const {
     register,
@@ -12,7 +37,14 @@ export default function FormA() {
     setValue,
     formState: { errors },
     watch,
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      previousDues: "0",
+      lessPaid: "0",
+      groupNo: "",
+      groupName: "",
+    },
+  });
   const [isSubmitted, setIsSubmitted] = useState(false); // State to control PDF button visibility
   const [isSubmitting, setIsSubmitting] = useState(false); // State for showing spinner
 
@@ -70,12 +102,15 @@ export default function FormA() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/suggestions?query=${query}&type=region`
+        //`http://localhost:5000/api/suggestions?query=${query}&type=region` old API
+        `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/suggestions?query=${query}&type=region`
       );
       const result = await response.json();
 
-      if (result.success) {
-        setRegionSuggestions(result.data); // Populate suggestions list
+      console.log("REGION:", result);
+
+      if (result.body.success) {
+        setRegionSuggestions(result.body.data); // Populate suggestions list
         setShowRegionSuggestions(true); // Show the suggestions dropdown
       }
     } catch (error) {
@@ -93,14 +128,19 @@ export default function FormA() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
+        // `http://localhost:5000/api/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
+        //   currentRegion || ""
+        // )}` old API
+        `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
           currentRegion || ""
         )}`
       );
       const result = await response.json();
 
-      if (result.success) {
-        setGroupNameSuggestions(result.data); // Populate suggestions list
+      console.log("GROUPNAME:", result);
+
+      if (result.body.success) {
+        setGroupNameSuggestions(result.body.data); // Populate suggestions list
         setShowGroupNameSuggestions(true); // Show the suggestions dropdown
       }
     } catch (error) {
@@ -121,7 +161,7 @@ export default function FormA() {
 
   // Fetch group details when a group number is selected or input
   const fetchGroupDetails = async (groupNo) => {
-    // If group number is empty, reset all related fields
+    // If group number is empty, reset all fields
     if (!groupNo) {
       setValue("region", "");
       setValue("groupName", "");
@@ -135,44 +175,85 @@ export default function FormA() {
         lessPaid: 0,
       });
 
-      return; // Exit the function early
+      return;
     }
 
     try {
       // First, fetch group details
       const groupResponse = await fetch(
-        `http://localhost:5000/api/groups/${String(groupNo)}`
+        //`http://localhost:5000/api/groups/${String(groupNo)}` old API
+        `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/groups/${String(
+          groupNo
+        )}`
       );
       const groupResult = await groupResponse.json();
 
-      // Fetch financial details
-      const financialResponse = await fetch(
-        `http://localhost:5000/api/financials/${String(groupNo)}`
-      );
-      const financialResult = await financialResponse.json();
-
-      if (groupResult.success && financialResult.success) {
+      // If group details are found, populate them regardless of financial data
+      console.log("RESULT : ", groupResult);
+      if (groupResult.body.success) {
         // Populate group details
-        setValue("region", groupResult.data.region || "");
-        setValue("groupName", groupResult.data.groupName || "");
-        setValue("groupNo", String(groupResult.data.groupNo || groupNo));
+        setValue("region", groupResult.body.data.region || "");
+        setValue("groupName", groupResult.body.data.groupName || "");
+        setValue("groupNo", String(groupResult.body.data.groupNo || groupNo));
 
-        // Populate financial details
-        const previousDuesValue = financialResult.data.previousDues || 0;
-        const lessPaidValue = financialResult.data.lessPaid || 0;
+        // Update group details state
+        setGroupDetails((prevDetails) => ({
+          ...prevDetails,
+          groupName: groupResult.body.data.groupName || "",
+          region: groupResult.body.data.region || "",
+        }));
 
-        // Explicitly set these values to ensure they're included in form submission
-        setValue("previousDues", previousDuesValue);
-        setValue("lessPaid", lessPaidValue);
+        try {
+          // Attempt to fetch financial details
+          const financialResponse = await fetch(
+            //`http://localhost:5000/api/financials/${String(groupNo)}`old API
+            `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/financials/${String(
+              groupNo
+            )}`
+          );
+          const financialResult = await financialResponse.json();
 
-        setGroupDetails({
-          groupName: groupResult.data.groupName || "",
-          region: groupResult.data.region || "",
-          previousDues: previousDuesValue,
-          lessPaid: lessPaidValue,
-        });
+          console.log("FINANCE:", financialResult);
+
+          // If financial details are found, update them
+          if (financialResult.body.success) {
+            const previousDuesValue =
+              financialResult.body.data.previousDues || 0;
+            const lessPaidValue = financialResult.body.data.lessPaid || 0;
+
+            setValue("previousDues", previousDuesValue);
+            setValue("lessPaid", lessPaidValue);
+
+            setGroupDetails((prevDetails) => ({
+              ...prevDetails,
+              previousDues: previousDuesValue,
+              lessPaid: lessPaidValue,
+            }));
+          } else {
+            // If no financial details found, set defaults but keep group details
+            setValue("previousDues", 0);
+            setValue("lessPaid", 0);
+
+            setGroupDetails((prevDetails) => ({
+              ...prevDetails,
+              previousDues: 0,
+              lessPaid: 0,
+            }));
+          }
+        } catch (financialError) {
+          console.error("Error fetching financial details:", financialError);
+          // Set default financial values but keep group details
+          setValue("previousDues", 0);
+          setValue("lessPaid", 0);
+
+          setGroupDetails((prevDetails) => ({
+            ...prevDetails,
+            previousDues: 0,
+            lessPaid: 0,
+          }));
+        }
       } else {
-        // Reset all fields if no details found
+        // If no group details found, reset all fields
         setValue("region", "");
         setValue("groupName", "");
         setValue("groupNo", "");
@@ -188,9 +269,7 @@ export default function FormA() {
       }
     } catch (error) {
       console.error("Error fetching group details:", error);
-
-      // Instead of showing an alert, silently handle the error
-      // Reset fields to a clean state
+      // Handle the error gracefully while maintaining any existing data
       setValue("previousDues", 0);
       setValue("lessPaid", 0);
     }
@@ -286,6 +365,83 @@ export default function FormA() {
     };
   }, []); // Run once on component mount
 
+  // Function to handle alphabets-only input
+  const handleAlphabetsOnly = (e) => {
+    if (
+      !/^[A-Za-z\s]*$/.test(e.key) &&
+      e.key !== "Backspace" &&
+      e.key !== "Delete" &&
+      e.key !== "ArrowLeft" &&
+      e.key !== "ArrowRight"
+    ) {
+      e.preventDefault();
+    }
+  };
+
+  // Function to handle mobile number input
+  const handleMobileInput = (e) => {
+    const value = e.target.value;
+    // Allow only if the total length is less than 15 or if deleting
+    if (value.length >= 15 && e.key !== "Backspace" && e.key !== "Delete") {
+      e.preventDefault();
+    }
+    // Allow only numbers, +, and parentheses
+    if (
+      !/^[+()0-9]*$/.test(e.key) &&
+      e.key !== "Backspace" &&
+      e.key !== "Delete" &&
+      e.key !== "ArrowLeft" &&
+      e.key !== "ArrowRight"
+    ) {
+      e.preventDefault();
+    }
+  };
+
+  // Custom register function with input restrictions
+  const registerField = (fieldName, options = {}) => {
+    const baseRules = register(fieldName, options);
+
+    if (options.alphabetsOnly) {
+      return {
+        ...baseRules,
+        onKeyDown: handleAlphabetsOnly,
+      };
+    }
+
+    if (options.isMobile) {
+      return {
+        ...baseRules,
+        onKeyDown: handleMobileInput,
+        onChange: (e) => {
+          if (e.target.value.length > 15) {
+            e.target.value = e.target.value.slice(0, 15);
+          }
+        },
+      };
+    }
+
+    return baseRules;
+  };
+
+  // Utility function to format number to Indian currency format
+  const formatToIndianCurrency = (number) => {
+    // Convert to 2 decimal places
+    const fixedNumber = Number(number).toFixed(2);
+
+    // Split into whole and decimal parts
+    const [wholePart, decimalPart] = fixedNumber.split(".");
+
+    // Format whole part with Indian grouping
+    const lastThree = wholePart.substring(wholePart.length - 3);
+    const otherNumbers = wholePart.substring(0, wholePart.length - 3);
+    const formattedWholePart = otherNumbers
+      ? otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + lastThree
+      : lastThree;
+
+    // Return formatted string with decimal part
+    return `₹${formattedWholePart}.${decimalPart}`;
+  };
+
   // Calculate the contribution dynamically
   useEffect(() => {
     if (coupleMembers !== undefined && singleMembers !== undefined) {
@@ -357,17 +513,20 @@ export default function FormA() {
     });
 
     //api call to backend
-    const response = await axios.post(`${remoteUrl}/api/contributions`, {
-      ...data,
-      previousDues: data.previousDues || 0,
-      lessPaid: data.lessPaid || 0,
-      coupleContribution,
-      singleContribution,
-      grossTotal,
-      gstAmount,
-      grandTotal,
-      netPayable,
-    });
+    const response = await axios.post(
+      `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/contributions`,
+      {
+        ...data,
+        previousDues: data.previousDues || 0,
+        lessPaid: data.lessPaid || 0,
+        coupleContribution,
+        singleContribution,
+        grossTotal,
+        gstAmount,
+        grandTotal,
+        netPayable,
+      }
+    );
 
     setIsSubmitting(true); // Show the spinner
     console.log(response);
@@ -424,6 +583,7 @@ export default function FormA() {
             <div className={css["form-group"]}>
               <h5 htmlFor="groupNo" className={css["input-label"]}>
                 Group Number
+                <RequiredField />
               </h5>
               <input
                 id="groupNo"
@@ -432,11 +592,8 @@ export default function FormA() {
                 placeholder="Enter group number"
                 className={css["input-field"]}
                 {...register("groupNo", {
-                  // required: "Group No is required",
-                  pattern: {
-                    value: /^[0-9]*$/,
-                    message: "Please enter only numbers",
-                  },
+                  required: "Group No is required",
+                  pattern: validationPatterns.numeric,
                 })}
                 onChange={handleGroupNoChange}
               />
@@ -449,6 +606,7 @@ export default function FormA() {
             <div className={css["form-group"]} ref={regionInputRef}>
               <h5 htmlFor="region" className={css["input-label"]}>
                 Region
+                <RequiredField />
               </h5>
               <input
                 id="region"
@@ -487,6 +645,7 @@ export default function FormA() {
             <div className={css["form-group"]} ref={groupNameInputRef}>
               <h5 htmlFor="groupName" className={css["input-label"]}>
                 Group Name
+                <RequiredField />
               </h5>
               <input
                 id="groupName"
@@ -498,7 +657,7 @@ export default function FormA() {
                 }
                 className={css["input-field"]}
                 {...register("groupName", {
-                  // required: "Group Name is required",
+                  required: "Group Name is required",
                 })}
                 onChange={handleGroupNameInputChange}
                 onFocus={() =>
@@ -528,11 +687,16 @@ export default function FormA() {
             </div>
 
             <div className={css["form-group full-row"]}>
-              <h5>Group Address</h5>
+              <h5>
+                Group Address
+                <RequiredField />
+              </h5>
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("groupAddress", {})}
+                {...register("groupAddress", {
+                  required: "Group Address is required",
+                })}
               />
               {errors.groupAddress && (
                 <span className={css.error}>{errors.groupAddress.message}</span>
@@ -540,12 +704,17 @@ export default function FormA() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Predident Mobile No.</h5>
+              <h5>
+                President Mobile No. <RequiredField />{" "}
+              </h5>
               <input
                 type="text"
                 placeholder="Mobile No."
+                maxLength="15"
                 {...register("presidentMobileNumber", {
-                  required: "This field is required",
+                  required: "President mobile number is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
               />
               {errors.presidentMobileNumber && (
@@ -556,12 +725,18 @@ export default function FormA() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Secretary Mobile No.</h5>
+              <h5>
+                Secretary Mobile No.
+                <RequiredField />
+              </h5>
               <input
                 type="text"
                 placeholder="Mobile No."
+                maxLength="15"
                 {...register("secretaryMobileNumber", {
-                  required: "This field is required",
+                  required: "Secretary mobile number is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
               />
               {errors.secretaryMobileNumber && (
@@ -572,12 +747,18 @@ export default function FormA() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Treasurer Mobile No.</h5>
+              <h5>
+                Treasurer Mobile No.
+                <RequiredField />
+              </h5>
               <input
                 type="text"
                 placeholder="Mobile No."
+                maxLength="15"
                 {...register("treasurerMobileNumber", {
-                  required: "This field is required",
+                  required: "Treasurer mobile number is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
               />
               {errors.treasurerMobileNumber && (
@@ -618,12 +799,19 @@ export default function FormA() {
             {/* Number of Couple Members */}
             <div className={css["form-row"]}>
               <div className={css["input-group"]}>
-                <h5>Number of Couple Members</h5>
+                <h5>
+                  Number of Couple Members
+                  <RequiredField />
+                </h5>
                 <input
                   type="number"
                   placeholder="Couple Members"
-                  {...register("coupleMembers", {
-                    required: "Couple Members is required",
+                  {...registerField("coupleMembers", {
+                    required: "Number of couple members is required",
+                    pattern: validationPatterns.numeric,
+                    validate: (value) =>
+                      (value >= 0 && value <= 9999) ||
+                      "Maximum 4 digits allowed",
                   })}
                 />
                 {errors.coupleMembers && (
@@ -634,19 +822,26 @@ export default function FormA() {
               </div>
               <div className={css["amount-group"]}>
                 <h5>Couple Contribution</h5>
-                <p>₹{coupleContribution}</p>
+                <p>{formatToIndianCurrency(coupleContribution)}</p>
               </div>
             </div>
 
             {/* Number of Single Members */}
             <div className={css["form-row"]}>
               <div className={css["input-group"]}>
-                <h5>Number of Single Members</h5>
+                <h5>
+                  Number of Single Members
+                  <RequiredField />{" "}
+                </h5>
                 <input
                   type="number"
                   placeholder="Single Members"
                   {...register("singleMembers", {
                     required: "Single Members is required",
+                    pattern: validationPatterns.numeric,
+                    validate: (value) =>
+                      (value >= 0 && value <= 9999) ||
+                      "Maximum 4 digits allowed",
                   })}
                 />
                 {errors.coupleMembers && (
@@ -657,24 +852,30 @@ export default function FormA() {
               </div>
               <div className={css["amount-group"]}>
                 <h5>Single Contribution</h5>
-                <p>₹{singleContribution}</p>
+                <p>{formatToIndianCurrency(singleContribution)}</p>
               </div>
             </div>
 
             {/* Previous Dues */}
             <div className={css["form-row"]}>
               <div className={css["input-group"]}>
-                <h5>Previous Dues</h5>
+                <h5>
+                  Previous Dues
+                  <RequiredField />{" "}
+                </h5>
                 <input
                   type="number"
                   placeholder="Previous Dues"
-                  {...register("previousDues")}
+                  {...register("previousDues", {
+                    required: "Previous dues is required",
+                    pattern: validationPatterns.decimal,
+                  })}
                   disabled
                 />
               </div>
               <div className={css["amount-group"]}>
                 <h5>Previous Dues Amount</h5>
-                <p>₹{previousDues}</p>
+                <p>{formatToIndianCurrency(previousDues)}</p>
               </div>
             </div>
 
@@ -684,7 +885,7 @@ export default function FormA() {
                 <h5>Gross Total</h5>
               </div>
               <div className={css["amount-group"]}>
-                <h5>₹{grossTotal}</h5>
+                <h5>{formatToIndianCurrency(grossTotal)}</h5>
               </div>
             </div>
 
@@ -694,7 +895,7 @@ export default function FormA() {
                 <h5>GST @ 18%</h5>
               </div>
               <div className={css["amount-group"]}>
-                <h5>₹{gstAmount}</h5>
+                <h5>{formatToIndianCurrency(gstAmount)}</h5>
               </div>
             </div>
 
@@ -704,25 +905,32 @@ export default function FormA() {
                 <h5>Grand Total</h5>
               </div>
               <div className={css["amount-group"]}>
-                <h5>₹{grandTotal}</h5>
+                <h5>{formatToIndianCurrency(grandTotal)}</h5>
               </div>
             </div>
 
             {/* Less Paid / Credit with JSGIF */}
             <div className={css["form-row"]}>
               <div className={css["input-group"]}>
-                <h5>Less Paid / Credit with JSGIF</h5>
+                <h5>
+                  Less Paid / Credit with JSGIF
+                  <RequiredField />
+                </h5>
                 <input
                   type="number"
                   placeholder="Less Paid / Credit"
-                  {...register("lessPaid")}
+                  {...register("lessPaid", {
+                    required: "Previous dues is required",
+                    pattern: validationPatterns.decimal,
+                  })}
                   disabled
                 />
               </div>
               <div className={css["amount-group"]}>
                 <h5>Credit Amount</h5>
-                <p>₹{creditWithJSGIF}</p>
+                <p>{formatToIndianCurrency(creditWithJSGIF)}</p>
               </div>
+
               <div className={css["form-group"]}>
                 <h5>Receipt No.</h5>
                 <input
@@ -746,7 +954,7 @@ export default function FormA() {
                 <h5>Net Payable</h5>
               </div>
               <div className={css["amount-group"]}>
-                <h5>₹{netPayable}</h5>
+                <h5>{formatToIndianCurrency(netPayable)}</h5>
               </div>
             </div>
           </div>
@@ -808,6 +1016,7 @@ export default function FormA() {
                   placeholder="Bank Name"
                   {...register("drawnOnBank", {
                     // required: "Bank Name is required",
+                    pattern: validationPatterns.alphabets,
                   })}
                 />
                 {errors.drawnOnBank && (
@@ -826,6 +1035,7 @@ export default function FormA() {
                   placeholder="Bank Branch"
                   {...register("bankBranch", {
                     // required: "Branch is required",
+                    pattern: validationPatterns.alphabets,
                   })}
                 />
                 {errors.bankBranch && (
