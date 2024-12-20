@@ -6,6 +6,27 @@ import { remoteUrl } from "../api.config";
 import axios from "axios";
 import { useState, useEffect, useRef, useCallback } from "react";
 
+// Updated validation patterns
+const validationPatterns = {
+  numeric: {
+    value: /^\d+$/,
+    message: "Please enter only numbers",
+  },
+  alphabetsOnly: {
+    value: /^[A-Za-z\s]*$/,
+    message: "Please enter only alphabets",
+  },
+  mobile: {
+    value: /^[+()0-9]*$/,
+    message: "Please enter a valid phone number",
+  },
+};
+
+// Required field indicator component
+const RequiredField = () => (
+  <span style={{ color: "red", marginLeft: "4px" }}>*</span>
+);
+
 export default function App() {
   const {
     register,
@@ -100,12 +121,15 @@ export default function App() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/suggestions?query=${query}&type=region`
+        //`http://localhost:5000/api/suggestions?query=${query}&type=region`
+        `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/suggestions?query=${query}&type=region`
       );
       const result = await response.json();
 
-      if (result.success) {
-        setRegionSuggestions(result.data); // Populate suggestions list
+      console.log("REGION:", result);
+
+      if (result.body.success) {
+        setRegionSuggestions(result.body.data); // Populate suggestions list
         setShowRegionSuggestions(true); // Show the suggestions dropdown
       }
     } catch (error) {
@@ -123,14 +147,19 @@ export default function App() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
+        // `http://localhost:5000/api/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
+        //   currentRegion || ""
+        // )}`
+        `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
           currentRegion || ""
         )}`
       );
       const result = await response.json();
 
-      if (result.success) {
-        setGroupNameSuggestions(result.data); // Populate suggestions list
+      console.log("GROUPNAME:", result);
+
+      if (result.body.success) {
+        setGroupNameSuggestions(result.body.data); // Populate suggestions list
         setShowGroupNameSuggestions(true); // Show the suggestions dropdown
       }
     } catch (error) {
@@ -153,18 +182,23 @@ export default function App() {
   const fetchGroupDetails = async (groupNo) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/groups/${String(groupNo)}`
+        //`http://localhost:5000/api/groups/${String(groupNo)}`
+        `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/groups/${String(
+          groupNo
+        )}`
       );
       const result = await response.json();
 
-      if (response.ok && result.success) {
+      console.log("RESULT:", result);
+
+      if (response.ok && result.body.success) {
         // Populate form fields with the fetched group details
-        setValue("region", result.data.region || "");
-        setValue("groupName", result.data.groupName || "");
-        setValue("groupNo", String(result.data.groupNo || groupNo)); // Explicitly set group number
+        setValue("region", result.body.data.region || "");
+        setValue("groupName", result.body.data.groupName || "");
+        setValue("groupNo", String(result.body.data.groupNo || groupNo)); // Explicitly set group number
         setGroupDetails({
-          groupName: result.data.groupName || "",
-          region: result.data.region || "",
+          groupName: result.body.data.groupName || "",
+          region: result.body.data.region || "",
         });
       } else {
         // Clear the form fields if no group details are found
@@ -434,11 +468,15 @@ export default function App() {
       }
 
       // Send the FormData using Axios
-      const response = await axios.post(`${remoteUrl}/api/forums`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post(
+        `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/forums`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       setIsSubmitting(true); // Show the spinner
       console.log("Response:", response.data);
@@ -456,7 +494,7 @@ export default function App() {
 
   const handleNumericInput = (e) => {
     // Allow only numeric input (prevent non-numeric characters)
-    e.target.value = e.target.value.replace(/[^0-9]/g, "");
+    e.target.value = e.target.value.replace(!/^[+()0-9]*$/, "");
   };
 
   const handlePresidentMobile = (e) => {
@@ -514,6 +552,64 @@ export default function App() {
     }
   };
 
+  // Function to handle alphabets-only input
+  const handleAlphabetsOnly = (e) => {
+    if (
+      !/^[A-Za-z\s]*$/.test(e.key) &&
+      e.key !== "Backspace" &&
+      e.key !== "Delete" &&
+      e.key !== "ArrowLeft" &&
+      e.key !== "ArrowRight"
+    ) {
+      e.preventDefault();
+    }
+  };
+
+  // Function to handle mobile number input
+  const handleMobileInput = (e) => {
+    const value = e.target.value;
+    // Allow only if the total length is less than 15 or if deleting
+    if (value.length >= 15 && e.key !== "Backspace" && e.key !== "Delete") {
+      e.preventDefault();
+    }
+    // Allow only numbers, +, and parentheses
+    if (
+      !/^[+()0-9]*$/.test(e.key) &&
+      e.key !== "Backspace" &&
+      e.key !== "Delete" &&
+      e.key !== "ArrowLeft" &&
+      e.key !== "ArrowRight"
+    ) {
+      e.preventDefault();
+    }
+  };
+
+  // Custom register function with input restrictions
+  const registerField = (fieldName, options = {}) => {
+    const baseRules = register(fieldName, options);
+
+    if (options.alphabetsOnly) {
+      return {
+        ...baseRules,
+        onKeyDown: handleAlphabetsOnly,
+      };
+    }
+
+    if (options.isMobile) {
+      return {
+        ...baseRules,
+        onKeyDown: handleMobileInput,
+        onChange: (e) => {
+          if (e.target.value.length > 15) {
+            e.target.value = e.target.value.slice(0, 15);
+          }
+        },
+      };
+    }
+
+    return baseRules;
+  };
+
   //PDF
   const componentRef = useRef();
 
@@ -555,12 +651,13 @@ export default function App() {
         >
           {/* General Info Section */}
           <div className={css["form-section"]}>
-            <h3>General Info</h3>
+            <h3>General Info </h3>
 
             {/* Group Number Input */}
             <div className={css["form-group"]}>
               <h5 htmlFor="groupNo" className={css["input-label"]}>
                 Group Number
+                <RequiredField />
               </h5>
               <input
                 id="groupNo"
@@ -569,11 +666,8 @@ export default function App() {
                 placeholder="Enter group number"
                 className={css["input-field"]}
                 {...register("groupNo", {
-                  // required: "Group No is required",
-                  pattern: {
-                    value: /^[0-9]*$/,
-                    message: "Please enter only numbers",
-                  },
+                  required: "Group No is required",
+                  pattern: validationPatterns.numeric,
                 })}
                 onChange={handleGroupNoChange}
               />
@@ -586,6 +680,7 @@ export default function App() {
             <div className={css["form-group"]} ref={regionInputRef}>
               <h5 htmlFor="region" className={css["input-label"]}>
                 Region
+                <RequiredField />
               </h5>
               <input
                 id="region"
@@ -593,7 +688,7 @@ export default function App() {
                 placeholder="Search for a region"
                 className={css["input-field"]}
                 {...register("region", {
-                  // required: "Region is required",
+                  required: "Region is required",
                 })}
                 onChange={handleRegionInputChange}
                 onFocus={() =>
@@ -624,6 +719,7 @@ export default function App() {
             <div className={css["form-group"]} ref={groupNameInputRef}>
               <h5 htmlFor="groupName" className={css["input-label"]}>
                 Group Name
+                <RequiredField />
               </h5>
               <input
                 id="groupName"
@@ -635,7 +731,7 @@ export default function App() {
                 }
                 className={css["input-field"]}
                 {...register("groupName", {
-                  // required: "Group Name is required",
+                  required: "Group Name is required",
                 })}
                 onChange={handleGroupNameInputChange}
                 onFocus={() =>
@@ -665,14 +761,16 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Name of the Forum</h5>
+              <h5>Name of the Sponsoring Group</h5>
               <input
                 type="text"
-                placeholder="Name of the Forum"
-                {...register("forumName", {})}
+                placeholder="Name of the Sponsoring Group"
+                {...register("sponsoringGroup", {})}
               />
-              {errors.forumName && (
-                <span className={css.error}>{errors.forumName.message}</span>
+              {errors.sponsoringGroup && (
+                <span className={css.error}>
+                  {errors.sponsoringGroup.message}
+                </span>
               )}
             </div>
 
@@ -704,34 +802,16 @@ export default function App() {
               )}
             </div>
 
-            <div className={css["form-group"]}>
-              <h5>STD Code</h5>
-              <input
-                type="text"
-                placeholder="Std code"
-                {...register("stdCode", {
-                  maxLength: {
-                    value: 10,
-                    message: "STD Code cannot exceed 10 digits",
-                  },
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                })}
-                onInput={handleNumericInput}
-              />
-              {errors.stdCode && (
-                <span className={css.error}>{errors.stdCode.message}</span>
-              )}
-            </div>
-
             <div className={css["form-group full-row"]}>
-              <h5>Correspondence Address</h5>
+              <h5>
+                Correspondence Address <RequiredField />
+              </h5>
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("address", {})}
+                {...register("address", {
+                  required: "Group Address is required",
+                })}
               />
               {errors.address && (
                 <span className={css.error}>{errors.address.message}</span>
@@ -744,14 +824,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("pinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.pinCode && (
                 <span className={css.error}>{errors.pinCode.message}</span>
@@ -764,20 +840,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("phone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Mobile number is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.phone && (
                 <span className={css.error}>{errors.phone.message}</span>
@@ -785,25 +851,17 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile</h5>
+              <h5>
+                Mobile <RequiredField />
+              </h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  required: "Mobile number is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.mobile && (
                 <span className={css.error}>{errors.mobile.message}</span>
@@ -858,14 +916,19 @@ export default function App() {
 
           {/*President */}
           <div className={css["form-section"]}>
-            <h3>(1) President</h3>
+            <h3>
+              (1) President <RequiredField />
+            </h3>
 
             <div className={css["form-group"]}>
-              <h5>Name</h5>
+              <h5>
+                Name <RequiredField />
+              </h5>
               <input
                 type="text"
                 placeholder="Name"
                 {...register("presidentName", {
+                  required: "President Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -880,11 +943,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Passport Size Photo</h5>
+              <h5>
+                Passport Size Photo <RequiredField />
+              </h5>
               <input
                 type="file"
                 accept="image/*"
-                {...register("presidentPhoto", {})}
+                {...register("presidentPhoto", {
+                  required: "President Photo is required",
+                })}
                 onChange={(e) => handleFileChange(e, "presidentPhoto")} // Unique field name
               />
               {errors.presidentPhoto && (
@@ -908,15 +975,14 @@ export default function App() {
             )}
 
             <div className={css["form-group full-row"]}>
-              <h5>Correspondence Address</h5>
+              <h5>
+                Correspondence Address <RequiredField />
+              </h5>
               <textarea
                 type="text"
                 placeholder="Address"
                 {...register("presidentAddress", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
+                  required: "Address is required",
                 })}
               />
               {errors.presidentAddress && (
@@ -932,14 +998,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("presidentPinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.presidentPinCode && (
                 <span className={css.error}>
@@ -954,20 +1016,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("presidentPhone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.presidentPhone && (
                 <span className={css.error}>
@@ -977,25 +1029,18 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Whatsapp No.</h5>
+              <h5>
+                Whatsapp/Mobile No.
+                <RequiredField />
+              </h5>
               <input
                 type="text"
-                placeholder="Whatsapp No."
+                placeholder="Whatsapp/Mobile No."
                 {...register("presidentWhatsapp", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
+                  required: "Whatsapp/Mobile No. is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.presidentWhatsapp && (
                 <span className={css.error}>
@@ -1005,25 +1050,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("presidentMobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Addtional Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
                 onChange={handlePresidentMobile}
               />
               {errors.presidentMobile && (
@@ -1057,7 +1092,12 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Occupation"
-                {...register("presidentOccupation", {})}
+                {...register("presidentOccupation", {
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Please enter only alphabets",
+                  },
+                })}
               />
               {errors.presidentOccupation && (
                 <span className={css.error}>
@@ -1086,10 +1126,13 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Birth Date</h5>
+              <h5>
+                President's Birth Date <RequiredField />
+              </h5>
               <input
                 type="date"
                 {...register("presidentBirthDate", {
+                  required: "Birth Date is required",
                   validate: (value) => {
                     const date = new Date(value);
                     const now = new Date();
@@ -1109,7 +1152,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("presidentSpouseBirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -1128,7 +1176,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("presidentMarriageDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return (
@@ -1155,6 +1208,7 @@ export default function App() {
                 type="text"
                 placeholder="Name"
                 {...register("immediateFormerPresidentName", {
+                  //required: "Immediate Former President Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -1203,12 +1257,7 @@ export default function App() {
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("immediateFormerPresidentAddress", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
-                })}
+                {...register("immediateFormerPresidentAddress", {})}
               />
               {errors.immediateFormerPresidentAddress && (
                 <span className={css.error}>
@@ -1223,14 +1272,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("immediateFormerPresidentPinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.immediateFormerPresidentPinCode && (
                 <span className={css.error}>
@@ -1245,20 +1290,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("immediateFormerPresidentPhone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.immediateFormerPresidentPhone && (
                 <span className={css.error}>
@@ -1268,25 +1303,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Whatsapp No.</h5>
+              <h5>Whatsapp/Mobile No.</h5>
               <input
                 type="text"
-                placeholder="Whatsapp No."
+                placeholder="Whatsapp/Mobile No."
                 {...register("immediateFormerPresidentWhatsapp", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
+                  //required: "Whatsapp/Mobile No. is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.immediateFormerPresidentWhatsapp && (
                 <span className={css.error}>
@@ -1296,25 +1321,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("immediateFormerPresidentMobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Addtional Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
                 onChange={handleImmediateFormerPresidentMobile}
               />
               {errors.immediateFormerPresidentMobile && (
@@ -1348,7 +1363,12 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Occupation"
-                {...register("immediateFormerPresidentOccupation", {})}
+                {...register("immediateFormerPresidentOccupation", {
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Please enter only alphabets",
+                  },
+                })}
               />
               {errors.immediateFormerPresidentOccupation && (
                 <span className={css.error}>
@@ -1377,11 +1397,16 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Birth Date</h5>
+              <h5>Immediate Former President's Birth Date</h5>
               <input
                 type="date"
                 {...register("immediateFormerPresidentBirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -1400,7 +1425,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("immediateFormerPresidentSpouseBirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -1419,7 +1449,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("immediateFormerPresidentMarriageDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return (
@@ -1438,14 +1473,19 @@ export default function App() {
 
           {/*Founder President */}
           <div className={css["form-section"]}>
-            <h3>(3) Founder President</h3>
+            <h3>
+              (3) Founder President <RequiredField />
+            </h3>
 
             <div className={css["form-group"]}>
-              <h5>Name</h5>
+              <h5>
+                Name <RequiredField />
+              </h5>
               <input
                 type="text"
                 placeholder="Name"
                 {...register("founderPresidentName", {
+                  required: "Founder President Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -1460,7 +1500,9 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Passport Size Photo</h5>
+              <h5>
+                Passport Size Photo <RequiredField />
+              </h5>
               <input
                 type="file"
                 accept="image/*"
@@ -1487,15 +1529,14 @@ export default function App() {
             )}
 
             <div className={css["form-group full-row"]}>
-              <h5>Correspondence Address</h5>
+              <h5>
+                Correspondence Address <RequiredField />
+              </h5>
               <textarea
                 type="text"
                 placeholder="Address"
                 {...register("founderPresidentAddress", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
+                  required: "Address is required",
                 })}
               />
               {errors.founderPresidentAddress && (
@@ -1511,14 +1552,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("founderPresidentPinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.founderPresidentPinCode && (
                 <span className={css.error}>
@@ -1533,20 +1570,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("founderPresidentPhone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.founderPresidentPhone && (
                 <span className={css.error}>
@@ -1556,25 +1583,18 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Whatsapp No.</h5>
+              <h5>
+                Whatsapp/Mobile No.
+                <RequiredField />
+              </h5>
               <input
                 type="text"
-                placeholder="Whatsapp No."
+                placeholder="Whatsapp/Mobile No."
                 {...register("founderPresidentWhatsapp", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
+                  required: "Whatsapp/Mobile No. is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.founderPresidentWhatsapp && (
                 <span className={css.error}>
@@ -1589,20 +1609,10 @@ export default function App() {
                 type="text"
                 placeholder="Mobile"
                 {...register("founderPresidentMobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Addtional Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
                 onChange={handleFounderPresidentMobile}
               />
               {errors.founderPresidentMobile && (
@@ -1636,7 +1646,12 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Occupation"
-                {...register("founderPresidentOccupation", {})}
+                {...register("founderPresidentOccupation", {
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Please enter only alphabets",
+                  },
+                })}
               />
               {errors.founderPresidentOccupation && (
                 <span className={css.error}>
@@ -1665,10 +1680,14 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Birth Date</h5>
+              <h5>
+                Founder President's Birth Date
+                <RequiredField />
+              </h5>
               <input
                 type="date"
                 {...register("founderPresidentBirthDate", {
+                  required: "Birth Date is required",
                   validate: (value) => {
                     const date = new Date(value);
                     const now = new Date();
@@ -1688,7 +1707,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("founderPresidentSpouseBirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -1707,7 +1731,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("founderPresidentMarriageDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return (
@@ -1734,6 +1763,7 @@ export default function App() {
                 type="text"
                 placeholder="Name"
                 {...register("nominatedFormerPresident1Name", {
+                  //required: "Nominated Former President 1 Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -1781,12 +1811,7 @@ export default function App() {
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("nominatedFormerPresident1Address", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
-                })}
+                {...register("nominatedFormerPresident1Address", {})}
               />
               {errors.nominatedFormerPresident1Address && (
                 <span className={css.error}>
@@ -1801,14 +1826,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("nominatedFormerPresident1PinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident1PinCode && (
                 <span className={css.error}>
@@ -1823,20 +1844,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("nominatedFormerPresident1Phone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident1Phone && (
                 <span className={css.error}>
@@ -1846,25 +1857,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Whatsapp No.</h5>
+              <h5>Whatsapp/Mobile No.</h5>
               <input
                 type="text"
-                placeholder="Whatsapp No."
+                placeholder="Whatsapp/Mobile No."
                 {...register("nominatedFormerPresident1Whatsapp", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
+                  //required: "Whatsapp/Mobile No. is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident1Whatsapp && (
                 <span className={css.error}>
@@ -1874,25 +1875,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("nominatedFormerPresident1Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Addtional Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
                 onChange={handleNominatedFormerPresident1Mobile}
               />
               {errors.nominatedFormerPresident1Mobile && (
@@ -1926,7 +1917,12 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Occupation"
-                {...register("nominatedFormerPresident1Occupation", {})}
+                {...register("nominatedFormerPresident1Occupation", {
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Please enter only alphabets",
+                  },
+                })}
               />
               {errors.nominatedFormerPresident1Occupation && (
                 <span className={css.error}>
@@ -1955,11 +1951,16 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Birth Date</h5>
+              <h5>Nominated Former President 1 's Birth Date</h5>
               <input
                 type="date"
                 {...register("nominatedFormerPresident1BirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -1978,7 +1979,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("nominatedFormerPresident1SpouseBirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -1997,7 +2003,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("nominatedFormerPresident1MarriageDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return (
@@ -2024,6 +2035,7 @@ export default function App() {
                 type="text"
                 placeholder="Name"
                 {...register("nominatedFormerPresident2Name", {
+                  //required: "Nominated Former President 2 Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -2071,12 +2083,7 @@ export default function App() {
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("nominatedFormerPresident2Address", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
-                })}
+                {...register("nominatedFormerPresident2Address", {})}
               />
               {errors.nominatedFormerPresident2Address && (
                 <span className={css.error}>
@@ -2091,14 +2098,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("nominatedFormerPresident2PinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident2PinCode && (
                 <span className={css.error}>
@@ -2113,20 +2116,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("nominatedFormerPresident2Phone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident2Phone && (
                 <span className={css.error}>
@@ -2136,25 +2129,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Whatsapp No.</h5>
+              <h5>Whatsapp/Mobile No.</h5>
               <input
                 type="text"
-                placeholder="Whatsapp No."
+                placeholder="Whatsapp/Mobile No."
                 {...register("nominatedFormerPresident2Whatsapp", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
+                  //required: "Whatsapp/Mobile No. is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident2Whatsapp && (
                 <span className={css.error}>
@@ -2164,25 +2147,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("nominatedFormerPresident2Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Addtional Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
                 onChange={handleNominatedFormerPresident2Mobile}
               />
               {errors.nominatedFormerPresident2Mobile && (
@@ -2216,7 +2189,12 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Occupation"
-                {...register("nominatedFormerPresident2Occupation", {})}
+                {...register("nominatedFormerPresident2Occupation", {
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Please enter only alphabets",
+                  },
+                })}
               />
               {errors.nominatedFormerPresident2Occupation && (
                 <span className={css.error}>
@@ -2245,11 +2223,16 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Birth Date</h5>
+              <h5>Nominated Former President 2 's Birth Date</h5>
               <input
                 type="date"
                 {...register("nominatedFormerPresident2BirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -2268,7 +2251,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("nominatedFormerPresident2SpouseBirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -2287,7 +2275,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("nominatedFormerPresident2MarriageDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return (
@@ -2314,6 +2307,7 @@ export default function App() {
                 type="text"
                 placeholder="Name"
                 {...register("nominatedFormerPresident3Name", {
+                  //required: "Nominated Former President 3 Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -2361,12 +2355,7 @@ export default function App() {
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("nominatedFormerPresident3Address", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
-                })}
+                {...register("nominatedFormerPresident3Address", {})}
               />
               {errors.nominatedFormerPresident3Address && (
                 <span className={css.error}>
@@ -2381,14 +2370,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("nominatedFormerPresident3PinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident3PinCode && (
                 <span className={css.error}>
@@ -2403,20 +2388,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("nominatedFormerPresident3Phone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident3Phone && (
                 <span className={css.error}>
@@ -2426,25 +2401,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Whatsapp No.</h5>
+              <h5>Whatsapp/Mobile No.</h5>
               <input
                 type="text"
-                placeholder="Whatsapp No."
+                placeholder="Whatsapp/Mobile No."
                 {...register("nominatedFormerPresident3Whatsapp", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
+                  //required: "Whatsapp/Mobile No. is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.nominatedFormerPresident3Whatsapp && (
                 <span className={css.error}>
@@ -2454,25 +2419,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("nominatedFormerPresident3Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Addtional Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
                 onChange={handleNominatedFormerPresident3Mobile}
               />
               {errors.nominatedFormerPresident3Mobile && (
@@ -2506,7 +2461,12 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Occupation"
-                {...register("nominatedFormerPresident3Occupation", {})}
+                {...register("nominatedFormerPresident3Occupation", {
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Please enter only alphabets",
+                  },
+                })}
               />
               {errors.nominatedFormerPresident3Occupation && (
                 <span className={css.error}>
@@ -2535,11 +2495,16 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Birth Date</h5>
+              <h5>Nominated Former President 3 's Birth Date</h5>
               <input
                 type="date"
                 {...register("nominatedFormerPresident3BirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -2558,7 +2523,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("nominatedFormerPresident3SpouseBirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -2577,7 +2547,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("nominatedFormerPresident3MarriageDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return (
@@ -2596,14 +2571,20 @@ export default function App() {
 
           {/*Vice President  */}
           <div className={css["form-section"]}>
-            <h3>(7) Vice President</h3>
+            <h3>
+              (7) Vice President
+              <RequiredField />
+            </h3>
 
             <div className={css["form-group"]}>
-              <h5>Name</h5>
+              <h5>
+                Name <RequiredField />
+              </h5>
               <input
                 type="text"
                 placeholder="Name"
                 {...register("vicePresidentName", {
+                  required: "Vice President Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -2618,7 +2599,9 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Passport Size Photo</h5>
+              <h5>
+                Passport Size Photo <RequiredField />
+              </h5>
               <input
                 type="file"
                 accept="image/*"
@@ -2645,15 +2628,14 @@ export default function App() {
             )}
 
             <div className={css["form-group full-row"]}>
-              <h5>Correspondence Address</h5>
+              <h5>
+                Correspondence Address <RequiredField />
+              </h5>
               <textarea
                 type="text"
                 placeholder="Address"
                 {...register("vicePresidentAddress", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
+                  required: "Address is required",
                 })}
               />
               {errors.vicePresidentAddress && (
@@ -2669,14 +2651,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("vicePresidentPinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.vicePresidentPinCode && (
                 <span className={css.error}>
@@ -2691,20 +2669,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("vicePresidentPhone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.vicePresidentPhone && (
                 <span className={css.error}>
@@ -2714,25 +2682,18 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Whatsapp No.</h5>
+              <h5>
+                Whatsapp/Mobile No.
+                <RequiredField />
+              </h5>
               <input
                 type="text"
-                placeholder="Whatsapp No."
+                placeholder="Whatsapp/Mobile No."
                 {...register("vicePresidentWhatsapp", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
+                  required: "Whatsapp/Mobile No. is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.vicePresidentWhatsapp && (
                 <span className={css.error}>
@@ -2742,25 +2703,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("vicePresidentMobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Addtional Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
                 onChange={handleVicePresidentMobile}
               />
               {errors.vicePresidentMobile && (
@@ -2794,7 +2745,12 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Occupation"
-                {...register("vicePresidentOccupation", {})}
+                {...register("vicePresidentOccupation", {
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Please enter only alphabets",
+                  },
+                })}
               />
               {errors.vicePresidentOccupation && (
                 <span className={css.error}>
@@ -2823,10 +2779,14 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Birth Date</h5>
+              <h5>
+                Vice President's Birth Date
+                <RequiredField />
+              </h5>
               <input
                 type="date"
                 {...register("vicePresidentBirthDate", {
+                  required: "Birth Date is required",
                   validate: (value) => {
                     const date = new Date(value);
                     const now = new Date();
@@ -2846,7 +2806,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("vicePresidentSpouseBirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -2865,7 +2830,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("vicePresidentMarriageDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return (
@@ -2884,14 +2854,19 @@ export default function App() {
 
           {/*Secretary */}
           <div className={css["form-section"]}>
-            <h3>(8) Secretary</h3>
+            <h3>
+              (8) Secretary <RequiredField />
+            </h3>
 
             <div className={css["form-group"]}>
-              <h5>Name</h5>
+              <h5>
+                Name <RequiredField />
+              </h5>
               <input
                 type="text"
                 placeholder="Name"
                 {...register("secretaryName", {
+                  required: "Secretary Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -2906,7 +2881,9 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Passport Size Photo</h5>
+              <h5>
+                Passport Size Photo <RequiredField />
+              </h5>
               <input
                 type="file"
                 accept="image/*"
@@ -2933,15 +2910,14 @@ export default function App() {
             )}
 
             <div className={css["form-group full-row"]}>
-              <h5>Correspondence Address</h5>
+              <h5>
+                Correspondence Address <RequiredField />
+              </h5>
               <textarea
                 type="text"
                 placeholder="Address"
                 {...register("secretaryAddress", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
+                  required: "Address is required",
                 })}
               />
               {errors.secretaryAddress && (
@@ -2957,14 +2933,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("secretaryPinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.secretaryPinCode && (
                 <span className={css.error}>
@@ -2979,20 +2951,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("secretaryPhone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.secretaryPhone && (
                 <span className={css.error}>
@@ -3002,25 +2964,18 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Whatsapp No.</h5>
+              <h5>
+                Whatsapp/Mobile No.
+                <RequiredField />
+              </h5>
               <input
                 type="text"
-                placeholder="Whatsapp No."
+                placeholder="Whatsapp/Mobile No."
                 {...register("secretaryWhatsapp", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
+                  required: "Whatsapp/Mobile No. is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.secretaryWhatsapp && (
                 <span className={css.error}>
@@ -3030,25 +2985,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("secretaryMobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Addtional Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
                 onChange={handleSecretaryMobile}
               />
               {errors.secretaryMobile && (
@@ -3082,7 +3027,12 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Occupation"
-                {...register("secretaryOccupation", {})}
+                {...register("secretaryOccupation", {
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Please enter only alphabets",
+                  },
+                })}
               />
               {errors.secretaryOccupation && (
                 <span className={css.error}>
@@ -3111,10 +3061,14 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Birth Date</h5>
+              <h5>
+                Secretary's Birth Date
+                <RequiredField />
+              </h5>
               <input
                 type="date"
                 {...register("secretaryBirthDate", {
+                  required: "Birth Date is required",
                   validate: (value) => {
                     const date = new Date(value);
                     const now = new Date();
@@ -3134,7 +3088,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("secretarySpouseBirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -3153,7 +3112,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("secretaryMarriageDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return (
@@ -3172,14 +3136,20 @@ export default function App() {
 
           {/*Joint Secretary */}
           <div className={css["form-section"]}>
-            <h3>(9) Joint Secretary</h3>
+            <h3>
+              (9) Joint Secretary
+              <RequiredField />
+            </h3>
 
             <div className={css["form-group"]}>
-              <h5>Name</h5>
+              <h5>
+                Name <RequiredField />
+              </h5>
               <input
                 type="text"
                 placeholder="Name"
                 {...register("jointSecretaryName", {
+                  required: "Joint Sectrtary Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -3194,7 +3164,9 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Passport Size Photo</h5>
+              <h5>
+                Passport Size Photo <RequiredField />
+              </h5>
               <input
                 type="file"
                 accept="image/*"
@@ -3221,15 +3193,14 @@ export default function App() {
             )}
 
             <div className={css["form-group full-row"]}>
-              <h5>Correspondence Address</h5>
+              <h5>
+                Correspondence Address <RequiredField />
+              </h5>
               <textarea
                 type="text"
                 placeholder="Address"
                 {...register("jointSecretaryAddress", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
+                  required: "Address is required",
                 })}
               />
               {errors.jointSecretaryAddress && (
@@ -3245,14 +3216,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("jointSecretaryPinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.jointSecretaryPinCode && (
                 <span className={css.error}>
@@ -3267,20 +3234,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("jointSecretaryPhone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.jointSecretaryPhone && (
                 <span className={css.error}>
@@ -3290,25 +3247,18 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Whatsapp No.</h5>
+              <h5>
+                Whatsapp/Mobile No.
+                <RequiredField />
+              </h5>
               <input
                 type="text"
-                placeholder="Whatsapp No."
+                placeholder="Whatsapp/Mobile No."
                 {...register("jointSecretaryWhatsapp", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
+                  required: "Whatsapp/Mobile No. is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.jointSecretaryWhatsapp && (
                 <span className={css.error}>
@@ -3318,25 +3268,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("jointSecretaryMobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Addtional Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
                 onChange={handleJointSecretaryMobile}
               />
               {errors.jointSecretaryMobile && (
@@ -3370,7 +3310,12 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Occupation"
-                {...register("jointSecretaryOccupation", {})}
+                {...register("jointSecretaryOccupation", {
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Please enter only alphabets",
+                  },
+                })}
               />
               {errors.jointSecretaryOccupation && (
                 <span className={css.error}>
@@ -3399,10 +3344,14 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Birth Date</h5>
+              <h5>
+                Joint Secretary's Birth Date
+                <RequiredField />
+              </h5>
               <input
                 type="date"
                 {...register("jointSecretaryBirthDate", {
+                  required: "Birth Date is required",
                   validate: (value) => {
                     const date = new Date(value);
                     const now = new Date();
@@ -3422,7 +3371,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("jointSecretarySpouseBirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -3441,7 +3395,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("jointSecretaryMarriageDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return (
@@ -3460,14 +3419,19 @@ export default function App() {
 
           {/*Treasurer  */}
           <div className={css["form-section"]}>
-            <h3>(10) Treasurer</h3>
+            <h3>
+              (10) Treasurer <RequiredField />
+            </h3>
 
             <div className={css["form-group"]}>
-              <h5>Name</h5>
+              <h5>
+                Name <RequiredField />
+              </h5>
               <input
                 type="text"
                 placeholder="Name"
                 {...register("treasurerName", {
+                  required: "Treasurer Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -3482,7 +3446,9 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Passport Size Photo</h5>
+              <h5>
+                Passport Size Photo <RequiredField />
+              </h5>
               <input
                 type="file"
                 accept="image/*"
@@ -3509,15 +3475,14 @@ export default function App() {
             )}
 
             <div className={css["form-group full-row"]}>
-              <h5>Correspondence Address</h5>
+              <h5>
+                Correspondence Address <RequiredField />
+              </h5>
               <textarea
                 type="text"
                 placeholder="Address"
                 {...register("treasurerAddress", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
+                  required: "Address is required",
                 })}
               />
               {errors.treasurerAddress && (
@@ -3533,14 +3498,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("treasurerPinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.treasurerPinCode && (
                 <span className={css.error}>
@@ -3555,20 +3516,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("treasurerPhone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.treasurerPhone && (
                 <span className={css.error}>
@@ -3578,25 +3529,18 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Whatsapp No.</h5>
+              <h5>
+                Whatsapp/Mobile No.
+                <RequiredField />
+              </h5>
               <input
                 type="text"
-                placeholder="Whatsapp No."
+                placeholder="Whatsapp/Mobile No."
                 {...register("treasurerWhatsapp", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "WhatsApp number must be 10 digits",
-                  },
+                  required: "Whatsapp/Mobile No. is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.treasurerWhatsapp && (
                 <span className={css.error}>
@@ -3606,25 +3550,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("treasurerMobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
                 onChange={handleTreasurerMobile}
               />
               {errors.treasurerMobile && (
@@ -3658,7 +3592,12 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Occupation"
-                {...register("treasurerOccupation", {})}
+                {...register("treasurerOccupation", {
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Please enter only alphabets",
+                  },
+                })}
               />
               {errors.treasurerOccupation && (
                 <span className={css.error}>
@@ -3687,10 +3626,14 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Birth Date</h5>
+              <h5>
+                Treasurer's Birth Date
+                <RequiredField />
+              </h5>
               <input
                 type="date"
                 {...register("treasurerBirthDate", {
+                  required: "Birth Date is required",
                   validate: (value) => {
                     const date = new Date(value);
                     const now = new Date();
@@ -3710,7 +3653,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("treasurerSpouseBirthDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -3729,7 +3677,12 @@ export default function App() {
               <input
                 type="date"
                 {...register("treasurerMarriageDate", {
+                  required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return (
@@ -3774,12 +3727,7 @@ export default function App() {
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("committeemember1Address", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
-                })}
+                {...register("committeemember1Address", {})}
               />
               {errors.committeemember1Address && (
                 <span className={css.error}>
@@ -3794,14 +3742,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("committeemember1PinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember1PinCode && (
                 <span className={css.error}>
@@ -3816,20 +3760,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("committeemember1Phone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember1Phone && (
                 <span className={css.error}>
@@ -3839,25 +3773,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("committeemember1Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember1Mobile && (
                 <span className={css.error}>
@@ -3914,12 +3838,7 @@ export default function App() {
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("committeemember2Address", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
-                })}
+                {...register("committeemember2Address", {})}
               />
               {errors.committeemember2Address && (
                 <span className={css.error}>
@@ -3934,14 +3853,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("committeemember2PinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember2PinCode && (
                 <span className={css.error}>
@@ -3956,20 +3871,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("committeemember2Phone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember2Phone && (
                 <span className={css.error}>
@@ -3979,25 +3884,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("committeemember2Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember2Mobile && (
                 <span className={css.error}>
@@ -4054,12 +3949,7 @@ export default function App() {
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("committeemember3Address", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
-                })}
+                {...register("committeemember3Address", {})}
               />
               {errors.committeemember3Address && (
                 <span className={css.error}>
@@ -4074,14 +3964,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("committeemember3PinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember3PinCode && (
                 <span className={css.error}>
@@ -4096,20 +3982,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("committeemember3Phone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember3Phone && (
                 <span className={css.error}>
@@ -4119,25 +3995,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("committeemember3Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember3Mobile && (
                 <span className={css.error}>
@@ -4194,12 +4060,7 @@ export default function App() {
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("committeemember4Address", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
-                })}
+                {...register("committeemember4Address", {})}
               />
               {errors.committeemember4Address && (
                 <span className={css.error}>
@@ -4214,14 +4075,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("committeemember4PinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember4PinCode && (
                 <span className={css.error}>
@@ -4236,20 +4093,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("committeemember4Phone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember4Phone && (
                 <span className={css.error}>
@@ -4259,25 +4106,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("committeemember4Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember4Mobile && (
                 <span className={css.error}>
@@ -4334,12 +4171,7 @@ export default function App() {
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("committeemember5Address", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
-                })}
+                {...register("committeemember5Address", {})}
               />
               {errors.committeemember5Address && (
                 <span className={css.error}>
@@ -4354,14 +4186,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("committeemember5PinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember5PinCode && (
                 <span className={css.error}>
@@ -4376,20 +4204,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("committeemember5Phone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember5Phone && (
                 <span className={css.error}>
@@ -4399,25 +4217,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("committeemember5Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember5Mobile && (
                 <span className={css.error}>
@@ -4474,12 +4282,7 @@ export default function App() {
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("committeemember6Address", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
-                })}
+                {...register("committeemember6Address", {})}
               />
               {errors.committeemember6Address && (
                 <span className={css.error}>
@@ -4494,14 +4297,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("committeemember6PinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember6PinCode && (
                 <span className={css.error}>
@@ -4516,20 +4315,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("committeemember6Phone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember6Phone && (
                 <span className={css.error}>
@@ -4539,25 +4328,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("committeemember6Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember6Mobile && (
                 <span className={css.error}>
@@ -4614,12 +4393,7 @@ export default function App() {
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("committeemember7Address", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
-                })}
+                {...register("committeemember7Address", {})}
               />
               {errors.committeemember7Address && (
                 <span className={css.error}>
@@ -4634,14 +4408,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("committeemember7PinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember7PinCode && (
                 <span className={css.error}>
@@ -4656,20 +4426,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("committeemember7Phone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember7Phone && (
                 <span className={css.error}>
@@ -4679,25 +4439,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("committeemember7Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember7Mobile && (
                 <span className={css.error}>
@@ -4754,12 +4504,7 @@ export default function App() {
               <textarea
                 type="text"
                 placeholder="Address"
-                {...register("committeemember8Address", {
-                  minLength: {
-                    value: 10,
-                    message: "Please enter complete address",
-                  },
-                })}
+                {...register("committeemember8Address", {})}
               />
               {errors.committeemember8Address && (
                 <span className={css.error}>
@@ -4774,14 +4519,10 @@ export default function App() {
                 type="text"
                 placeholder="Pin Code"
                 {...register("committeemember8PinCode", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: { value: 6, message: "Pin Code must be 6 digits" },
-                  maxLength: { value: 6, message: "Pin Code must be 6 digits" },
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember8PinCode && (
                 <span className={css.error}>
@@ -4796,20 +4537,10 @@ export default function App() {
                 type="text"
                 placeholder="Phone (with STD)"
                 {...register("committeemember8Phone", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 8,
-                    message: "Phone number must be at least 8 digits",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "Phone number cannot exceed 15 digits",
-                  },
+                  //required: "Phone (with STD) is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember8Phone && (
                 <span className={css.error}>
@@ -4819,25 +4550,15 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>Mobile No.</h5>
+              <h5>Addtional Mobile No.</h5>
               <input
                 type="text"
                 placeholder="Mobile"
                 {...register("committeemember8Mobile", {
-                  pattern: {
-                    value: /^[0-9]*$/i,
-                    message: "Please enter only numbers",
-                  },
-                  minLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
-                  maxLength: {
-                    value: 10,
-                    message: "Mobile number must be 10 digits",
-                  },
+                  //required: "Mobile is required",
+                  isMobile: true,
+                  pattern: validationPatterns.mobile,
                 })}
-                onInput={handleNumericInput}
               />
               {errors.committeemember8Mobile && (
                 <span className={css.error}>
