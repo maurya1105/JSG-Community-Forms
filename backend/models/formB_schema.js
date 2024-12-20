@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 
 const forumSchema = new mongoose.Schema({
     // Basic Forum Info
-    forumName: String,
+    sponsoringGroup: String,
     groupNo: String,
     region: String,
     groupName: String,
@@ -12,7 +12,7 @@ const forumSchema = new mongoose.Schema({
     phone: String,
     mobile: String,
     email: String,
-    stdCode: String,
+    //stdCode: String,
     dateOfCharter: String,
     dateOfInaugration: String,
     electedBearers: Date,
