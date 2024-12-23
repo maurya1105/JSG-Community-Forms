@@ -59,6 +59,10 @@ const contributionSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  currentDues: {
+    type: Number,
+    required: true
+  },
   singleMembers: {
     type: String,
     required: true
@@ -71,10 +75,6 @@ const contributionSchema = new mongoose.Schema({
   submissionDate: {
     type: Date,
     default: Date.now
-  },
-  receiptNumber:{
-    type:String,
-    required:true
   },
   paymentReferenceNumber:{
     type:String,
