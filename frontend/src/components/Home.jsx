@@ -21,9 +21,6 @@ const Home = () => {
         <button onClick={() => navigate("/form-b")} style={styles.button}>
           Form B
         </button>
-        <button onClick={() => navigate("/test")} style={styles.button}>
-          Test
-        </button>
       </div>
     </div>
   );
