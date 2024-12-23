@@ -22,7 +22,7 @@ body {
   /* Header section styling */
   .header-section {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 3px;
   }
   
   .header-section .logo {
@@ -58,11 +58,12 @@ body {
     color: #face1d;
     margin-top: 25px;
     font-weight: bold;
+    margin-bottom: 5px;
   }
   
   form {
     width: 80%;
-    margin: 50px auto;
+    margin: 5px auto;
     padding: 20px;
     border: 1px solid #face1d;
     border-radius: 8px;
@@ -154,6 +155,66 @@ body {
   .form-section .form-group.full-row textarea {
     width: 100%;
   }
+
+  /* Add these CSS styles to your existing CSS module */
+.phone-input-container {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  margin-bottom: 15px;
+  margin-top: 10px; /* Add space above the phone input container */
+  border: 1px solid #3f0986;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.phone-prefix {
+  padding: 10px;
+  background-color: #f8f2ff;
+  color: #3f0986;
+  border-right: 1px solid #3f0986;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  user-select: none;
+}
+
+.phone-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  background-color: white;
+}
+
+/* Remove default input styles for this specific input */
+.phone-input[type="text"] {
+  margin-bottom: 0;
+  border: none;
+  border-radius: 0;
+  margin-top: auto;
+}
+
+.phone-input:focus {
+  outline: none;
+}
+
+/* Container focus state */
+.phone-input-container:focus-within {
+  border-color: #3f0986;
+  box-shadow: 0 0 0 1px #3f0986;
+}
+
+@media (max-width: 480px) {
+  .phone-input-container {
+    font-size: 14px;
+  }
+}
+
   
   /* Styling for submit button */
   /* input[type="submit"] {
@@ -314,12 +375,16 @@ body {
     background-color: #f0f0f0;
     cursor: not-allowed;
   }
+
+  .form-actions{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   
   .suggestions-dropdown {
     position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
+    width: 40%;
     max-height: 300px;
     overflow-y: auto;
     background-color: white;
