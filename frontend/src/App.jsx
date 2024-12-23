@@ -16,7 +16,6 @@ const App = () => {
         <Route path="/form-b" element={<FormB />} />
         {/* <Route path="/form-a-data" element={<FormADataTable />} /> */}
         {/* <Route path="/form-b-data" element={<FormBDataTable />} /> */}
-        <Route path="/test" element={<Test />} />
       </Routes>
     </Router>
   );
