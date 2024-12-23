@@ -16,8 +16,8 @@ const validationPatterns = {
     message: "Please enter only alphabets",
   },
   mobile: {
-    value: /^[+()0-9]*$/,
-    message: "Please enter a valid phone number",
+    value: /^\d{10}$/,
+    message: "Please enter exactly 10 digits",
   },
   decimal: {
     value: /^\d{1,6}(\.\d{1,2})?$/,
@@ -31,6 +31,10 @@ const RequiredField = () => (
 );
 
 export default function FormA() {
+  useEffect(() => {
+    document.title = "JSGIF Form A";
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -57,6 +61,7 @@ export default function FormA() {
   // State for calculated values
   const [coupleContribution, setCoupleContribution] = useState(0);
   const [singleContribution, setSingleContribution] = useState(0);
+  const [currentDues, setCurrentDues] = useState(0);
   const [grossTotal, setGrossTotal] = useState(0);
   const [gstAmount, setGstAmount] = useState(0);
   const [grandTotal, setGrandTotal] = useState(0);
@@ -102,7 +107,7 @@ export default function FormA() {
 
     try {
       const response = await fetch(
-        //`http://localhost:5000/api/suggestions?query=${query}&type=region` old API
+        //`http://localhost:5000/api/suggestions?query=${query}&type=region`
         `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/suggestions?query=${query}&type=region`
       );
       const result = await response.json();
@@ -128,9 +133,9 @@ export default function FormA() {
 
     try {
       const response = await fetch(
-        // `http://localhost:5000/api/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
-        //   currentRegion || ""
-        // )}` old API
+        //`http://localhost:5000/api/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
+        //  currentRegion || ""
+        //)}`
         `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
           currentRegion || ""
         )}`
@@ -181,7 +186,7 @@ export default function FormA() {
     try {
       // First, fetch group details
       const groupResponse = await fetch(
-        //`http://localhost:5000/api/groups/${String(groupNo)}` old API
+        //`http://localhost:5000/api/groups/${String(groupNo)}`
         `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/groups/${String(
           groupNo
         )}`
@@ -206,7 +211,7 @@ export default function FormA() {
         try {
           // Attempt to fetch financial details
           const financialResponse = await fetch(
-            //`http://localhost:5000/api/financials/${String(groupNo)}`old API
+            //`http://localhost:5000/api/financials/${String(groupNo)}`
             `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/financials/${String(
               groupNo
             )}`
@@ -473,11 +478,12 @@ export default function FormA() {
       // GST on Single Contribution
       const singleGst = singleContributionAmount * gstRate;
 
+      //Current Dues
+      const currentDues = coupleContributionAmount + singleContributionAmount;
+
       // Gross Total
       const grossTotalAmount =
-        coupleContributionAmount +
-        singleContributionAmount +
-        previousDuesAmount;
+        coupleContributionAmount + singleContributionAmount;
 
       // GST on Gross Total
       const gstAmountCalculated = grossTotalAmount * gstRate;
@@ -486,12 +492,14 @@ export default function FormA() {
       const grandTotalAmount = grossTotalAmount + gstAmountCalculated;
 
       // Net Payable after deducting credit
-      const netPayableAmount = grandTotalAmount - creditWithJSGIFAmount;
+      const netPayableAmount =
+        grandTotalAmount + previousDuesAmount - creditWithJSGIFAmount; //no GSR on previousDues
       const finalNetPayable = netPayableAmount < 0 ? 0 : netPayableAmount;
 
       // Set the calculated values in state
       setCoupleContribution(coupleContributionAmount);
       setSingleContribution(singleContributionAmount);
+      setCurrentDues(currentDues);
       setGrossTotal(grossTotalAmount);
       setGstAmount(gstAmountCalculated);
       setGrandTotal(grandTotalAmount);
@@ -506,6 +514,7 @@ export default function FormA() {
       lessPaid: data.lessPaid || 0,
       coupleContribution,
       singleContribution,
+      currentDues,
       grossTotal,
       gstAmount,
       grandTotal,
@@ -515,12 +524,14 @@ export default function FormA() {
     //api call to backend
     const response = await axios.post(
       `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/contributions`,
+      //`http://localhost:5000/api/contributions`,
       {
         ...data,
         previousDues: data.previousDues || 0,
         lessPaid: data.lessPaid || 0,
         coupleContribution,
         singleContribution,
+        currentDues,
         grossTotal,
         gstAmount,
         grandTotal,
@@ -569,7 +580,7 @@ export default function FormA() {
       {/* Form Section */}
       <div
         ref={componentRef}
-        style={{ padding: "20px", background: "#3f0986", height: "auto" }}
+        style={{ padding: "5px", background: "#3f0986", height: "auto" }}
       >
         <form
           onSubmit={handleSubmit(onSubmit)}
@@ -705,18 +716,26 @@ export default function FormA() {
 
             <div className={css["form-group"]}>
               <h5>
-                President Mobile No. <RequiredField />{" "}
+                President Mobile No. <RequiredField />
               </h5>
-              <input
-                type="text"
-                placeholder="Mobile No."
-                maxLength="15"
-                {...register("presidentMobileNumber", {
-                  required: "President mobile number is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...register("presidentMobileNumber", {
+                    required: "President mobile number is required",
+                    pattern: validationPatterns.mobile,
+                    onChange: (e) => {
+                      let value = e.target.value;
+                      value = value.replace(/\D/g, "");
+                      value = value.slice(0, 10);
+                      e.target.value = value;
+                    },
+                  })}
+                />
+              </div>
               {errors.presidentMobileNumber && (
                 <span className={css.error}>
                   {errors.presidentMobileNumber.message}
@@ -726,19 +745,26 @@ export default function FormA() {
 
             <div className={css["form-group"]}>
               <h5>
-                Secretary Mobile No.
-                <RequiredField />
+                Secretary Mobile No. <RequiredField />
               </h5>
-              <input
-                type="text"
-                placeholder="Mobile No."
-                maxLength="15"
-                {...register("secretaryMobileNumber", {
-                  required: "Secretary mobile number is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...register("secretaryMobileNumber", {
+                    required: "Secretary mobile number is required",
+                    pattern: validationPatterns.mobile,
+                    onChange: (e) => {
+                      let value = e.target.value;
+                      value = value.replace(/\D/g, "");
+                      value = value.slice(0, 10);
+                      e.target.value = value;
+                    },
+                  })}
+                />
+              </div>
               {errors.secretaryMobileNumber && (
                 <span className={css.error}>
                   {errors.secretaryMobileNumber.message}
@@ -748,19 +774,26 @@ export default function FormA() {
 
             <div className={css["form-group"]}>
               <h5>
-                Treasurer Mobile No.
-                <RequiredField />
+                Treasurer Mobile No. <RequiredField />
               </h5>
-              <input
-                type="text"
-                placeholder="Mobile No."
-                maxLength="15"
-                {...register("treasurerMobileNumber", {
-                  required: "Treasurer mobile number is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...register("treasurerMobileNumber", {
+                    required: "Treasurer mobile number is required",
+                    pattern: validationPatterns.mobile,
+                    onChange: (e) => {
+                      let value = e.target.value;
+                      value = value.replace(/\D/g, "");
+                      value = value.slice(0, 10);
+                      e.target.value = value;
+                    },
+                  })}
+                />
+              </div>
               {errors.treasurerMobileNumber && (
                 <span className={css.error}>
                   {errors.treasurerMobileNumber.message}
@@ -836,7 +869,7 @@ export default function FormA() {
                 <input
                   type="number"
                   placeholder="Single Members"
-                  {...register("singleMembers", {
+                  {...registerField("singleMembers", {
                     required: "Single Members is required",
                     pattern: validationPatterns.numeric,
                     validate: (value) =>
@@ -856,26 +889,13 @@ export default function FormA() {
               </div>
             </div>
 
-            {/* Previous Dues */}
+            {/* Current Year Dues */}
             <div className={css["form-row"]}>
-              <div className={css["input-group"]}>
-                <h5>
-                  Previous Dues
-                  <RequiredField />{" "}
-                </h5>
-                <input
-                  type="number"
-                  placeholder="Previous Dues"
-                  {...register("previousDues", {
-                    required: "Previous dues is required",
-                    pattern: validationPatterns.decimal,
-                  })}
-                  disabled
-                />
+              <div className={css["text-group"]}>
+                <h5>Current Year Dues</h5>
               </div>
               <div className={css["amount-group"]}>
-                <h5>Previous Dues Amount</h5>
-                <p>{formatToIndianCurrency(previousDues)}</p>
+                <h5>{formatToIndianCurrency(currentDues)}</h5>
               </div>
             </div>
 
@@ -909,6 +929,29 @@ export default function FormA() {
               </div>
             </div>
 
+            {/* Previous Dues */}
+            <div className={css["form-row"]}>
+              <div className={css["input-group"]}>
+                <h5>
+                  Previous Dues
+                  <RequiredField />{" "}
+                </h5>
+                <input
+                  type="number"
+                  placeholder="Previous Dues"
+                  {...register("previousDues", {
+                    required: "Previous dues is required",
+                    pattern: validationPatterns.decimal,
+                  })}
+                  disabled
+                />
+              </div>
+              <div className={css["amount-group"]}>
+                <h5>Previous Dues Amount</h5>
+                <p>{formatToIndianCurrency(previousDues)}</p>
+              </div>
+            </div>
+
             {/* Less Paid / Credit with JSGIF */}
             <div className={css["form-row"]}>
               <div className={css["input-group"]}>
@@ -929,22 +972,6 @@ export default function FormA() {
               <div className={css["amount-group"]}>
                 <h5>Credit Amount</h5>
                 <p>{formatToIndianCurrency(creditWithJSGIF)}</p>
-              </div>
-
-              <div className={css["form-group"]}>
-                <h5>Receipt No.</h5>
-                <input
-                  type="text"
-                  placeholder="Receipt No."
-                  {...register("receiptNumber", {
-                    required: "Receipt Number is required",
-                  })}
-                />
-                {errors.receiptNumber && (
-                  <span className={css.error}>
-                    {errors.receiptNumber.message}
-                  </span>
-                )}
               </div>
             </div>
 
@@ -1003,6 +1030,7 @@ export default function FormA() {
                   placeholder="Amount Paid"
                   {...register("amountPaid", {
                     // required: "Amount Paid is required",
+                    pattern: validationPatterns.decimal,
                   })}
                 />
                 {errors.amountPaid && (
@@ -1015,8 +1043,8 @@ export default function FormA() {
                   type="text"
                   placeholder="Bank Name"
                   {...register("drawnOnBank", {
-                    // required: "Bank Name is required",
-                    pattern: validationPatterns.alphabets,
+                    //required: "Bank Name is required",
+                    pattern: validationPatterns.alphabetsOnly,
                   })}
                 />
                 {errors.drawnOnBank && (
@@ -1035,7 +1063,7 @@ export default function FormA() {
                   placeholder="Bank Branch"
                   {...register("bankBranch", {
                     // required: "Branch is required",
-                    pattern: validationPatterns.alphabets,
+                    pattern: validationPatterns.alphabetsOnly,
                   })}
                 />
                 {errors.bankBranch && (
