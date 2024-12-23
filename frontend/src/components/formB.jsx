@@ -17,8 +17,16 @@ const validationPatterns = {
     message: "Please enter only alphabets",
   },
   mobile: {
-    value: /^[+()0-9]*$/,
-    message: "Please enter a valid phone number",
+    value: /^\d{10}$/,
+    message: "Please enter exactly 10 digits",
+  },
+  pincode: {
+    value: /^\d{6}$/, // Updated pattern: exactly 6 digits
+    message: "Please enter a valid 6-digit Indian PIN code",
+  },
+  email: {
+    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+    message: "Invalid email address",
   },
 };
 
@@ -33,53 +41,154 @@ export default function App() {
     handleSubmit,
     watch,
     setValue,
+    trigger,
     formState: { errors },
-  } = useForm();
+  } = useForm({
+    mode: "onChange", // Validates on change
+    reValidateMode: "onChange", // Re-validates on change
+  });
   const [previews, setPreviews] = useState({}); // State for multiple previews
   const [isSubmitted, setIsSubmitted] = useState(false); // State to control PDF button visibility
   const [isSubmitting, setIsSubmitting] = useState(false); // State for showing spinner
   const [isMobileUpdated, setIsMobileUpdated] = useState(false);
+
+  const [base64Images, setBase64Images] = useState({});
+
+  // Handle file selection and Base64 conversion
+  const handleImageFileChange = (event, fieldName) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64String = reader.result.split(",")[1]; // Extract Base64 string
+        setPreviews((prev) => ({
+          ...prev,
+          [fieldName]: reader.result, // Save full Base64 URI for preview
+        }));
+        setBase64Images((prev) => ({
+          ...prev,
+          [fieldName]: base64String, // Save only Base64 data for payload
+        }));
+        console.log(`Base64 for ${fieldName}:`, base64String); // Log Base64 string
+      };
+      reader.onerror = (error) => {
+        console.error("Error converting file to Base64:", error);
+      };
+    }
+  };
+
+  // Form submission handler
+  const handleFormSubmit = async (data) => {
+    console.log("Form data before adding Base64:", data); // Debug log
+    const payload = {
+      ...data,
+      presidentPhoto: base64Images.presidentPhoto || null,
+      immediateFormerPresidentPhoto:
+        base64Images.immediateFormerPresidentPhoto || null,
+      founderPresidentPhoto: base64Images.founderPresidentPhoto || null,
+      nominatedFormerPresident1Photo:
+        base64Images.nominatedFormerPresident1Photo || null,
+      nominatedFormerPresident2Photo:
+        base64Images.nominatedFormerPresident2Photo || null,
+      nominatedFormerPresident3Photo:
+        base64Images.nominatedFormerPresident3Photo || null,
+      vicePresidentPhoto: base64Images.vicePresidentPhoto || null,
+      secretaryPhoto: base64Images.secretaryPhoto || null,
+      jointSecretaryPhoto: base64Images.jointSecretaryPhoto || null,
+      treasurerPhoto: base64Images.treasurerPhoto || null,
+    };
+
+    console.log("Payload to send:", payload); // Debug payload
+
+    try {
+      const response = await axios.post(
+        "https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/forums",
+        payload,
+        { headers: { "Content-Type": "application/json" } }
+      );
+      console.log("API Response:", response.data); // Log API response
+      alert("Data uploaded successfully!");
+    } catch (error) {
+      console.error("Error uploading data:", error); // Log error
+      alert("Error uploading data.");
+    }
+  };
+
   // const onSubmit = data => {
   //   console.log('Form submitted with data:', data);
   //   alert("Form submitted successfully!");
   //   // You could also send this data to an API here
   // };
-  const presidentMobile = watch("presidentMobile"); // Watch the value of presidentMobile
+  const presidentAddtionalMobile = watch("presidentAddtionalMobile"); // Watch the value of presidentAddtionalMobile
   const presidentWhatsapp = watch("presidentWhatsapp"); // Watch the value of presidentWhatsapp
-  const immediateFormerPresidentMobile = watch(
-    "immediateFormerPresidentMobile"
-  ); // Watch the value of immediateFormerPresidentMobile
+  const immediateFormerPresidentAddtionalMobile = watch(
+    "immediateFormerPresidentAddtionalMobile"
+  ); // Watch the value of immediateFormerPresidentAddtionalMobile
   const immediateFormerPresidentWhatsapp = watch(
     "immediateFormerPresidentWhatsapp"
   ); // Watch the value of immediateFormerPresidentWhatsapp
-  const founderPresidentMobile = watch("founderPresidentMobile"); // Watch the value of founderPresidentMobile
+  const founderPresidentAddtionalMobile = watch(
+    "founderPresidentAddtionalMobile"
+  ); // Watch the value of founderPresidentAddtionalMobile
   const founderPresidentWhatsapp = watch("founderPresidentWhatsapp"); // Watch the value of founderPresidentWhatsapp
-  const nominatedFormerPresident1Mobile = watch(
-    "nominatedFormerPresident1Mobile"
-  ); // Watch the value of nominatedFormerPresident1Mobile
+  const nominatedFormerPresident1AddtionalMobile = watch(
+    "nominatedFormerPresident1AddtionalMobile"
+  ); // Watch the value of nominatedFormerPresident1AddtionalMobile
   const nominatedFormerPresident1Whatsapp = watch(
     "nominatedFormerPresident1Whatsapp"
   ); // Watch the value of nominatedFormerPresident1Whatsapp
-  const nominatedFormerPresident2Mobile = watch(
-    "nominatedFormerPresident2Mobile"
-  ); // Watch the value of nominatedFormerPresident2Mobile
+  const nominatedFormerPresident2AddtionalMobile = watch(
+    "nominatedFormerPresident2AddtionalMobile"
+  ); // Watch the value of nominatedFormerPresident2AddtionalMobile
   const nominatedFormerPresident2Whatsapp = watch(
     "nominatedFormerPresident2Whatsapp"
   ); // Watch the value of nominatedFormerPresident2Whatsapp
-  const nominatedFormerPresident3Mobile = watch(
-    "nominatedFormerPresident3Mobile"
-  ); // Watch the value of nominatedFormerPresident3Mobile
+  const nominatedFnominatedFormerPresident3AddtionalMobileormerPresident3Mobile =
+    watch("nominatedFormerPresident3AddtionalMobile"); // Watch the value of nominatedFormerPresident3AddtionalMobile
   const nominatedFormerPresident3Whatsapp = watch(
     "nominatedFormerPresident3Whatsapp"
   ); // Watch the value of nominatedFormerPresident3Whatsapp
-  const vicePresidentMobile = watch("vicePresidentMobile"); // Watch the value of vicePresidentMobile
+  const vicePresidentAddtionalMobile = watch("vicePresidentAddtionalMobile"); // Watch the value of vicePresidentAddtionalMobile
   const vicePresidentWhatsapp = watch("vicePresidentWhatsapp"); // Watch the value of vicePresidentWhatsapp
-  const secretaryMobile = watch("secretaryMobile"); // Watch the value of secretaryMobile
+  const secretaryAddtionalMobile = watch("secretaryAddtionalMobile"); // Watch the value of secretaryAddtionalMobile
   const secretaryWhatsapp = watch("secretaryWhatsapp"); // Watch the value of secretaryWhatsapp
-  const jointSecretaryMobile = watch("jointSecretaryMobile"); // Watch the value of jointSecretaryMobile
+  const jointSecretaryAddtionalMobile = watch("jointSecretaryAddtionalMobile"); // Watch the value of jointSecretaryAddtionalMobile
   const jointSecretaryWhatsapp = watch("jointSecretaryWhatsapp"); // Watch the value of jointSecretaryWhatsapp
-  const treasurerMobile = watch("treasurerMobile"); // Watch the value of treasurerMobile
+  const treasurerAddtionalMobile = watch("treasurerAddtionalMobile"); // Watch the value of treasurerAddtionalMobile
   const treasurerWhatsapp = watch("treasurerWhatsapp"); // Watch the value of treasurerWhatsapp
+  const committeemember1Whatsapp = watch("committeemember1Whatsapp"); // Watch the value of committeemember1Whatsapp
+  const committeemember1AddtionalMobile = watch(
+    "committeemember1AddtionalMobile"
+  ); //Watch the value of committeemember1AddtionalMobile
+  const committeemember2Whatsapp = watch("committeemember2Whatsapp"); // Watch the value of committeemember2Whatsapp
+  const committeemember2AddtionalMobile = watch(
+    "committeemember2AddtionalMobile"
+  ); //Watch the value of committeemember2AddtionalMobile
+  const committeemember3Whatsapp = watch("committeemember3Whatsapp"); // Watch the value of committeemember3Whatsapp
+  const committeemember3AddtionalMobile = watch(
+    "committeemember3AddtionalMobile"
+  ); //Watch the value of committeemember3AddtionalMobile
+  const committeemember4Whatsapp = watch("committeemember4Whatsapp"); // Watch the value of committeemember4Whatsapp
+  const committeemember4AddtionalMobile = watch(
+    "committeemember4AddtionalMobile"
+  ); //Watch the value of committeemember4AddtionalMobile
+  const committeemember5Whatsapp = watch("committeemember5Whatsapp"); // Watch the value of committeemember5Whatsapp
+  const committeemember5AddtionalMobile = watch(
+    "committeemember5AddtionalMobile"
+  ); //Watch the value of committeemember5AddtionalMobile
+  const committeemember6Whatsapp = watch("committeemember6Whatsapp"); // Watch the value of committeemember6Whatsapp
+  const committeemember6AddtionalMobile = watch(
+    "committeemember6AddtionalMobile"
+  ); //Watch the value of committeemember6AddtionalMobile
+  const committeemember7Whatsapp = watch("committeemember7Whatsapp"); // Watch the value of committeemember7Whatsapp
+  const committeemember7AddtionalMobile = watch(
+    "committeemember7AddtionalMobile"
+  ); //Watch the value of committeemember7AddtionalMobile
+  const committeemember8Whatsapp = watch("committeemember8Whatsapp"); // Watch the value of committeemember8Whatsapp
+  const committeemember8AddtionalMobile = watch(
+    "committeemember8AddtionalMobile"
+  ); //Watch the value of committeemember8AddtionalMobile
 
   //For AutoFilling
   const [groupNo, setGroupNo] = useState(""); // For tracking the group number input
@@ -147,9 +256,9 @@ export default function App() {
 
     try {
       const response = await fetch(
-        // `http://localhost:5000/api/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
-        //   currentRegion || ""
-        // )}`
+        //`http://localhost:5000/api/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
+        //  currentRegion || ""
+        //)}`
         `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/suggestions?query=${query}&type=groupName&region=${encodeURIComponent(
           currentRegion || ""
         )}`
@@ -296,152 +405,142 @@ export default function App() {
   }, []); // Run once on component mount
 
   useEffect(() => {
-    // Check if presidentMobile is empty and presidentWhatsapp is a valid phone number
-    if (
-      !presidentMobile &&
-      presidentWhatsapp &&
-      presidentWhatsapp.length === 10 &&
-      !isMobileUpdated
-    ) {
-      setValue("presidentMobile", presidentWhatsapp); // Set presidentMobile to presidentWhatsapp if valid
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (presidentWhatsapp && !isMobileUpdated) {
+      setValue("presidentAddtionalMobile", presidentWhatsapp); // Keep Mobile in sync with WhatsApp
     }
-  }, [presidentWhatsapp, presidentMobile, setValue]);
+  }, [presidentWhatsapp, isMobileUpdated, setValue]);
 
   useEffect(() => {
-    // Check if immediateFormerPresidentMobile is empty and immediateFormerPresidentWhatsapp is a valid phone number
-    if (
-      !immediateFormerPresidentMobile &&
-      immediateFormerPresidentWhatsapp &&
-      immediateFormerPresidentWhatsapp.length === 10 &&
-      !isMobileUpdated
-    ) {
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (immediateFormerPresidentWhatsapp && !isMobileUpdated) {
       setValue(
-        "immediateFormerPresidentMobile",
+        "immediateFormerPresidentAddtionalMobile",
         immediateFormerPresidentWhatsapp
-      ); // Set immediateFormerPresidentMobile to immediateFormerPresidentWhatsapp if valid
+      ); // Keep Mobile in sync with WhatsApp
     }
-  }, [
-    immediateFormerPresidentWhatsapp,
-    immediateFormerPresidentMobile,
-    setValue,
-  ]);
+  }, [immediateFormerPresidentWhatsapp, isMobileUpdated, setValue]);
 
   useEffect(() => {
-    // Check if founderPresidentMobile is empty and founderPresidentWhatsapp is a valid phone number
-    if (
-      !founderPresidentMobile &&
-      founderPresidentWhatsapp &&
-      founderPresidentWhatsapp.length === 10 &&
-      !isMobileUpdated
-    ) {
-      setValue("founderPresidentMobile", founderPresidentWhatsapp); // Set founderPresidentMobile to founderPresidentWhatsapp if valid
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (founderPresidentWhatsapp && !isMobileUpdated) {
+      setValue("founderPresidentAddtionalMobile", founderPresidentWhatsapp); // Keep Mobile in sync with WhatsApp
     }
-  }, [founderPresidentWhatsapp, founderPresidentMobile, setValue]);
+  }, [founderPresidentWhatsapp, isMobileUpdated, setValue]);
 
   useEffect(() => {
-    // Check if nominatedFormerPresident1Mobile is empty and nominatedFormerPresident1Whatsapp is a valid phone number
-    if (
-      !nominatedFormerPresident1Mobile &&
-      nominatedFormerPresident1Whatsapp &&
-      nominatedFormerPresident1Whatsapp.length === 10 &&
-      !isMobileUpdated
-    ) {
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (nominatedFormerPresident1Whatsapp && !isMobileUpdated) {
       setValue(
-        "nominatedFormerPresident1Mobile",
+        "nominatedFormerPresident1AddtionalMobile",
         nominatedFormerPresident1Whatsapp
-      ); // Set nominatedFormerPresident1Mobile to nominatedFormerPresident1Whatsapp if valid
+      ); // Keep Mobile in sync with WhatsApp
     }
-  }, [
-    nominatedFormerPresident1Whatsapp,
-    nominatedFormerPresident1Mobile,
-    setValue,
-  ]);
+  }, [nominatedFormerPresident1Whatsapp, isMobileUpdated, setValue]);
 
   useEffect(() => {
-    // Check if nominatedFormerPresident2Mobile is empty and nominatedFormerPresident2Whatsapp is a valid phone number
-    if (
-      !nominatedFormerPresident2Mobile &&
-      nominatedFormerPresident2Whatsapp &&
-      nominatedFormerPresident2Whatsapp.length === 10 &&
-      !isMobileUpdated
-    ) {
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (nominatedFormerPresident2Whatsapp && !isMobileUpdated) {
       setValue(
-        "nominatedFormerPresident2Mobile",
+        "nominatedFormerPresident2AddtionalMobile",
         nominatedFormerPresident2Whatsapp
-      ); // Set nominatedFormerPresident2Mobile to nominatedFormerPresident2Whatsapp if valid
+      ); // Keep Mobile in sync with WhatsApp
     }
-  }, [
-    nominatedFormerPresident2Whatsapp,
-    nominatedFormerPresident2Mobile,
-    setValue,
-  ]);
+  }, [nominatedFormerPresident2Whatsapp, isMobileUpdated, setValue]);
 
   useEffect(() => {
-    // Check if nominatedFormerPresident3Mobile is empty and nominatedFormerPresident3Whatsapp is a valid phone number
-    if (
-      !nominatedFormerPresident3Mobile &&
-      nominatedFormerPresident3Whatsapp &&
-      nominatedFormerPresident3Whatsapp.length === 10 &&
-      !isMobileUpdated
-    ) {
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (nominatedFormerPresident3Whatsapp && !isMobileUpdated) {
       setValue(
-        "nominatedFormerPresident3Mobile",
+        "nominatedFormerPresident3AddtionalMobile",
         nominatedFormerPresident3Whatsapp
-      ); // Set nominatedFormerPresident3Mobile to nominatedFormerPresident3Whatsapp if valid
+      ); // Keep Mobile in sync with WhatsApp
     }
-  }, [
-    nominatedFormerPresident3Whatsapp,
-    nominatedFormerPresident3Mobile,
-    setValue,
-  ]);
+  }, [nominatedFormerPresident3Whatsapp, isMobileUpdated, setValue]);
 
   useEffect(() => {
-    // Check if vicePresidentMobile is empty and vicePresidentWhatsapp is a valid phone number
-    if (
-      !vicePresidentMobile &&
-      vicePresidentWhatsapp &&
-      vicePresidentWhatsapp.length === 10 &&
-      !isMobileUpdated
-    ) {
-      setValue("vicePresidentMobile", vicePresidentWhatsapp); // Set vicePresidentMobile to vicePresidentWhatsapp if valid
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (vicePresidentWhatsapp && !isMobileUpdated) {
+      setValue("vicePresidentAddtionalMobile", vicePresidentWhatsapp); // Keep Mobile in sync with WhatsApp
     }
-  }, [vicePresidentWhatsapp, vicePresidentMobile, setValue]);
+  }, [vicePresidentWhatsapp, isMobileUpdated, setValue]);
 
   useEffect(() => {
-    // Check if secretaryMobile is empty and secretaryWhatsapp is a valid phone number
-    if (
-      !secretaryMobile &&
-      secretaryWhatsapp &&
-      secretaryWhatsapp.length === 10 &&
-      !isMobileUpdated
-    ) {
-      setValue("secretaryMobile", secretaryWhatsapp); // Set secretaryMobile to secretaryWhatsapp if valid
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (secretaryWhatsapp && !isMobileUpdated) {
+      setValue("secretaryAddtionalMobile", secretaryWhatsapp); // Keep Mobile in sync with WhatsApp
     }
-  }, [secretaryWhatsapp, secretaryMobile, setValue]);
+  }, [secretaryWhatsapp, isMobileUpdated, setValue]);
 
   useEffect(() => {
-    // Check if jointSecretaryMobile is empty and jointSecretaryWhatsapp is a valid phone number
-    if (
-      !jointSecretaryMobile &&
-      jointSecretaryWhatsapp &&
-      jointSecretaryWhatsapp.length === 10 &&
-      !isMobileUpdated
-    ) {
-      setValue("jointSecretaryMobile", jointSecretaryWhatsapp); // Set jointSecretaryMobile to jointSecretaryWhatsapp if valid
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (jointSecretaryWhatsapp && !isMobileUpdated) {
+      setValue("jointSecretaryAddtionalMobile", jointSecretaryWhatsapp); // Keep Mobile in sync with WhatsApp
     }
-  }, [jointSecretaryWhatsapp, jointSecretaryMobile, setValue]);
+  }, [jointSecretaryWhatsapp, isMobileUpdated, setValue]);
 
   useEffect(() => {
-    // Check if treasurerMobile is empty and treasurerWhatsapp is a valid phone number
-    if (
-      !treasurerMobile &&
-      treasurerWhatsapp &&
-      treasurerWhatsapp.length === 10 &&
-      !isMobileUpdated
-    ) {
-      setValue("treasurerMobile", treasurerWhatsapp); // Set treasurerMobile to treasurerWhatsapp if valid
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (treasurerWhatsapp && !isMobileUpdated) {
+      setValue("treasurerAddtionalMobile", treasurerWhatsapp); // Keep Mobile in sync with WhatsApp
     }
-  }, [treasurerWhatsapp, treasurerMobile, setValue]);
+  }, [treasurerWhatsapp, isMobileUpdated, setValue]);
+
+  useEffect(() => {
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (committeemember1Whatsapp && !isMobileUpdated) {
+      setValue("committeemember1AddtionalMobile", committeemember1Whatsapp); // Keep Mobile in sync with WhatsApp
+    }
+  }, [committeemember1Whatsapp, isMobileUpdated, setValue]);
+
+  useEffect(() => {
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (committeemember2Whatsapp && !isMobileUpdated) {
+      setValue("committeemember2AddtionalMobile", committeemember2Whatsapp); // Keep Mobile in sync with WhatsApp
+    }
+  }, [committeemember2Whatsapp, isMobileUpdated, setValue]);
+
+  useEffect(() => {
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (committeemember3Whatsapp && !isMobileUpdated) {
+      setValue("committeemember3AddtionalMobile", committeemember3Whatsapp); // Keep Mobile in sync with WhatsApp
+    }
+  }, [committeemember3Whatsapp, isMobileUpdated, setValue]);
+
+  useEffect(() => {
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (committeemember4Whatsapp && !isMobileUpdated) {
+      setValue("committeemember4AddtionalMobile", committeemember4Whatsapp); // Keep Mobile in sync with WhatsApp
+    }
+  }, [committeemember4Whatsapp, isMobileUpdated, setValue]);
+
+  useEffect(() => {
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (committeemember5Whatsapp && !isMobileUpdated) {
+      setValue("committeemember5AddtionalMobile", committeemember5Whatsapp); // Keep Mobile in sync with WhatsApp
+    }
+  }, [committeemember5Whatsapp, isMobileUpdated, setValue]);
+
+  useEffect(() => {
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (committeemember6Whatsapp && !isMobileUpdated) {
+      setValue("committeemember6AddtionalMobile", committeemember6Whatsapp); // Keep Mobile in sync with WhatsApp
+    }
+  }, [committeemember6Whatsapp, isMobileUpdated, setValue]);
+
+  useEffect(() => {
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (committeemember7Whatsapp && !isMobileUpdated) {
+      setValue("committeemember7AddtionalMobile", committeemember7Whatsapp); // Keep Mobile in sync with WhatsApp
+    }
+  }, [committeemember7Whatsapp, isMobileUpdated, setValue]);
+
+  useEffect(() => {
+    // Automatically copy WhatsApp number to Mobile number if Mobile hasn't been manually updated
+    if (committeemember8Whatsapp && !isMobileUpdated) {
+      setValue("committeemember8AddtionalMobile", committeemember8Whatsapp); // Keep Mobile in sync with WhatsApp
+    }
+  }, [committeemember8Whatsapp, isMobileUpdated, setValue]);
 
   const onSubmit = async (data) => {
     try {
@@ -470,6 +569,7 @@ export default function App() {
       // Send the FormData using Axios
       const response = await axios.post(
         `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/forums`,
+        //`http://localhost:5000/api/forums`,
         formData,
         {
           headers: {
@@ -481,9 +581,12 @@ export default function App() {
       setIsSubmitting(true); // Show the spinner
       console.log("Response:", response.data);
 
-      alert("Form submitted successfully!");
+      // Simulate an API call delay
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       setIsSubmitted(true); // Show the "Download as PDF" button
       setIsSubmitting(false); // Hide the spinner
+      alert("Form submitted successfully!");
     } catch (error) {
       console.error("Error submitting form:", error);
       alert("Failed to submit the form. Please try again.");
@@ -492,14 +595,10 @@ export default function App() {
 
   console.log(errors);
 
-  const handleNumericInput = (e) => {
-    // Allow only numeric input (prevent non-numeric characters)
-    e.target.value = e.target.value.replace(!/^[+()0-9]*$/, "");
-  };
-
-  const handlePresidentMobile = (e) => {
-    setIsMobileUpdated(true);
-  };
+  // const handleNumericInput = (e) => {
+  //   // Allow only numeric input (prevent non-numeric characters)
+  //   e.target.value = e.target.value.replace(!/^[+()0-9]*$/, "");
+  // };
 
   const handleImmediateFormerPresidentMobile = (e) => {
     setIsMobileUpdated(true);
@@ -537,8 +636,9 @@ export default function App() {
     setIsMobileUpdated(true);
   };
 
-  //Preview Image
+  // Image preview handler
   const handleFileChange = (event, fieldName) => {
+    console.log("Preview for:", fieldName);
     const file = event.target.files[0];
     if (file) {
       const reader = new FileReader();
@@ -548,6 +648,7 @@ export default function App() {
           ...prev,
           [fieldName]: reader.result, // Update preview for the specific field
         }));
+        console.log(`Preview updated for ${fieldName}:`, reader.result); // Debug preview
       };
     }
   };
@@ -565,13 +666,15 @@ export default function App() {
     }
   };
 
-  // Function to handle mobile number input
+  // Function to handle mobile number input with a max length of 15
   const handleMobileInput = (e) => {
     const value = e.target.value;
-    // Allow only if the total length is less than 15 or if deleting
+
+    // Prevent typing if the value exceeds 15 characters
     if (value.length >= 15 && e.key !== "Backspace" && e.key !== "Delete") {
       e.preventDefault();
     }
+
     // Allow only numbers, +, and parentheses
     if (
       !/^[+()0-9]*$/.test(e.key) &&
@@ -584,26 +687,31 @@ export default function App() {
     }
   };
 
+  // Function to handle change event and restrict length
+  const handleMobileChange = (e, setValue, fieldName, trigger) => {
+    let value = e.target.value;
+
+    // Restrict the value to a maximum of 10 characters
+    if (value.length > 10) {
+      value = value.slice(0, 10);
+    }
+
+    // Update the value using the `setValue` function from `react-hook-form`
+    setValue(fieldName, value);
+
+    // Trigger validation for the field
+    trigger(fieldName);
+  };
+
   // Custom register function with input restrictions
   const registerField = (fieldName, options = {}) => {
     const baseRules = register(fieldName, options);
-
-    if (options.alphabetsOnly) {
-      return {
-        ...baseRules,
-        onKeyDown: handleAlphabetsOnly,
-      };
-    }
 
     if (options.isMobile) {
       return {
         ...baseRules,
         onKeyDown: handleMobileInput,
-        onChange: (e) => {
-          if (e.target.value.length > 15) {
-            e.target.value = e.target.value.slice(0, 15);
-          }
-        },
+        onChange: (e) => handleMobileChange(e, setValue, fieldName, trigger),
       };
     }
 
@@ -646,7 +754,7 @@ export default function App() {
         style={{ padding: "20px", background: "#3f0986", height: "auto" }}
       >
         <form
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(handleFormSubmit)}
           className={css["scrolling-form"]}
         >
           {/* General Info Section */}
@@ -670,6 +778,7 @@ export default function App() {
                   pattern: validationPatterns.numeric,
                 })}
                 onChange={handleGroupNoChange}
+                onBlur={() => trigger("mobile")} // Validates field on blur
               />
               {errors.groupNo && (
                 <p className={css.error}>{errors.groupNo.message}</p>
@@ -689,11 +798,13 @@ export default function App() {
                 className={css["input-field"]}
                 {...register("region", {
                   required: "Region is required",
+                  pattern: validationPatterns.alphabetsOnly,
                 })}
                 onChange={handleRegionInputChange}
                 onFocus={() =>
                   regionSuggestions.length > 0 && setShowRegionSuggestions(true)
                 }
+                onBlur={() => trigger("mobile")} // Validates field on blur
               />
               {errors.region && (
                 <p className={css.error}>{errors.region.message}</p>
@@ -716,7 +827,7 @@ export default function App() {
             </div>
 
             {/* Group Name Input with Enhanced Autocomplete */}
-            <div className={css["form-group"]} ref={groupNameInputRef}>
+            <div className={css["form-group full-row"]} ref={groupNameInputRef}>
               <h5 htmlFor="groupName" className={css["input-label"]}>
                 Group Name
                 <RequiredField />
@@ -757,20 +868,6 @@ export default function App() {
                     </li>
                   ))}
                 </ul>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Name of the Sponsoring Group</h5>
-              <input
-                type="text"
-                placeholder="Name of the Sponsoring Group"
-                {...register("sponsoringGroup", {})}
-              />
-              {errors.sponsoringGroup && (
-                <span className={css.error}>
-                  {errors.sponsoringGroup.message}
-                </span>
               )}
             </div>
 
@@ -825,46 +922,12 @@ export default function App() {
                 placeholder="Pin Code"
                 {...register("pinCode", {
                   //required: "Pin Code is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
+                onBlur={() => trigger("pinCode")} // Validates on blur for immediate feedback
               />
               {errors.pinCode && (
                 <span className={css.error}>{errors.pinCode.message}</span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("phone", {
-                  //required: "Mobile number is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.phone && (
-                <span className={css.error}>{errors.phone.message}</span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>
-                Mobile <RequiredField />
-              </h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("mobile", {
-                  required: "Mobile number is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.mobile && (
-                <span className={css.error}>{errors.mobile.message}</span>
               )}
             </div>
 
@@ -874,14 +937,34 @@ export default function App() {
                 type="email"
                 placeholder="E-Mail"
                 {...register("email", {
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Invalid email address",
-                  },
+                  pattern: validationPatterns.email,
                 })}
               />
               {errors.email && (
                 <span className={css.error}>{errors.email.message}</span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Mobile <RequiredField />
+              </h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("mobile", {
+                    required: "Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                  //onBlur={() => trigger("mobile")} // Validates field on blur
+                />
+              </div>
+              {errors.mobile && (
+                <span className={css.error}>{errors.mobile.message}</span>
               )}
             </div>
           </div>
@@ -895,7 +978,7 @@ export default function App() {
 
             <div className={css["form-group"]}>
               <h5>
-                General Meeting for Election of our Forum was held on Date
+                General Meeting for Election of the Forum was held on Date
               </h5>
               <input
                 type="date"
@@ -905,7 +988,7 @@ export default function App() {
 
             <div className={css["form-group"]}>
               <h5>
-                Following Office Bearers of our Forum were elected on Date
+                Following Office Bearers of the Forum were elected on Date
               </h5>
               <input
                 type="date"
@@ -942,26 +1025,25 @@ export default function App() {
               )}
             </div>
 
+            {/* President Photo Field */}
             <div className={css["form-group"]}>
-              <h5>
-                Passport Size Photo <RequiredField />
-              </h5>
+              <h5>Photo</h5>
               <input
                 type="file"
                 accept="image/*"
                 {...register("presidentPhoto", {
-                  required: "President Photo is required",
+                  required: "Photo is required",
                 })}
-                onChange={(e) => handleFileChange(e, "presidentPhoto")} // Unique field name
+                onChange={(e) => handleImageFileChange(e, "presidentPhoto")}
               />
               {errors.presidentPhoto && (
-                <span className={css.error}>
+                <span className={css["text-red-500"]}>
                   {errors.presidentPhoto.message}
                 </span>
               )}
             </div>
 
-            {/* Image Preview for President */}
+            {/* Image Preview */}
             {previews.presidentPhoto && (
               <div className={css["mt-3"]}>
                 <p>Image Preview (President):</p>
@@ -999,71 +1081,12 @@ export default function App() {
                 placeholder="Pin Code"
                 {...register("presidentPinCode", {
                   //required: "Pin Code is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.presidentPinCode && (
                 <span className={css.error}>
                   {errors.presidentPinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("presidentPhone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.presidentPhone && (
-                <span className={css.error}>
-                  {errors.presidentPhone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>
-                Whatsapp/Mobile No.
-                <RequiredField />
-              </h5>
-              <input
-                type="text"
-                placeholder="Whatsapp/Mobile No."
-                {...register("presidentWhatsapp", {
-                  required: "Whatsapp/Mobile No. is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.presidentWhatsapp && (
-                <span className={css.error}>
-                  {errors.presidentWhatsapp.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("presidentMobile", {
-                  //required: "Addtional Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-                onChange={handlePresidentMobile}
-              />
-              {errors.presidentMobile && (
-                <span className={css.error}>
-                  {errors.presidentMobile.message}
                 </span>
               )}
             </div>
@@ -1083,6 +1106,76 @@ export default function App() {
               {errors.presidentEmail && (
                 <span className={css.error}>
                   {errors.presidentEmail.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Whatsapp/Mobile No. <RequiredField />
+              </h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("presidentWhatsapp", {
+                    required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.presidentWhatsapp && (
+                <span className={css.error}>
+                  {errors.presidentWhatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Addtional Mobile No. <RequiredField />
+              </h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("presidentAddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.presidentAddtionalMobile && (
+                <span className={css.error}>
+                  {errors.presidentAddtionalMobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                President's Birth Date <RequiredField />
+              </h5>
+              <input
+                type="date"
+                {...register("presidentBirthDate", {
+                  required: "Birth Date is required",
+                  validate: (value) => {
+                    const date = new Date(value);
+                    const now = new Date();
+                    return date < now || "Birth date cannot be in the future";
+                  },
+                })}
+              />
+              {errors.presidentBirthDate && (
+                <span className={css.error}>
+                  {errors.presidentBirthDate.message}
                 </span>
               )}
             </div>
@@ -1121,28 +1214,6 @@ export default function App() {
               {errors.presidentSpouseName && (
                 <span className={css.error}>
                   {errors.presidentSpouseName.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>
-                President's Birth Date <RequiredField />
-              </h5>
-              <input
-                type="date"
-                {...register("presidentBirthDate", {
-                  required: "Birth Date is required",
-                  validate: (value) => {
-                    const date = new Date(value);
-                    const now = new Date();
-                    return date < now || "Birth date cannot be in the future";
-                  },
-                })}
-              />
-              {errors.presidentBirthDate && (
-                <span className={css.error}>
-                  {errors.presidentBirthDate.message}
                 </span>
               )}
             </div>
@@ -1229,8 +1300,9 @@ export default function App() {
                 accept="image/*"
                 {...register("immediateFormerPresidentPhoto", {})}
                 onChange={(e) =>
-                  handleFileChange(e, "immediateFormerPresidentPhoto")
-                } // Unique field name
+                  handleImageFileChange(e, "immediateFormerPresidentPhoto")
+                }
+                // Unique field name
               />
               {errors.immediateFormerPresidentPhoto && (
                 <span className={css.error}>
@@ -1274,67 +1346,12 @@ export default function App() {
                 {...register("immediateFormerPresidentPinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.immediateFormerPresidentPinCode && (
                 <span className={css.error}>
                   {errors.immediateFormerPresidentPinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("immediateFormerPresidentPhone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.immediateFormerPresidentPhone && (
-                <span className={css.error}>
-                  {errors.immediateFormerPresidentPhone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Whatsapp/Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Whatsapp/Mobile No."
-                {...register("immediateFormerPresidentWhatsapp", {
-                  //required: "Whatsapp/Mobile No. is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.immediateFormerPresidentWhatsapp && (
-                <span className={css.error}>
-                  {errors.immediateFormerPresidentWhatsapp.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("immediateFormerPresidentMobile", {
-                  //required: "Addtional Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-                onChange={handleImmediateFormerPresidentMobile}
-              />
-              {errors.immediateFormerPresidentMobile && (
-                <span className={css.error}>
-                  {errors.immediateFormerPresidentMobile.message}
                 </span>
               )}
             </div>
@@ -1354,6 +1371,76 @@ export default function App() {
               {errors.immediateFormerPresidentEmail && (
                 <span className={css.error}>
                   {errors.immediateFormerPresidentEmail.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Whatsapp/Mobile No. <RequiredField />
+              </h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("immediateFormerPresidentWhatsapp", {
+                    required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.immediateFormerPresidentWhatsapp && (
+                <span className={css.error}>
+                  {errors.immediateFormerPresidentWhatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("immediateFormerPresidentAddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.immediateFormerPresidentAddtionalMobile && (
+                <span className={css.error}>
+                  {errors.immediateFormerPresidentAddtionalMobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Immediate Former President's Birth Date</h5>
+              <input
+                type="date"
+                {...register("immediateFormerPresidentBirthDate", {
+                  required: false, // The field is not required
+                  validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
+                    const date = new Date(value);
+                    const now = new Date();
+                    return date < now || "Birth date cannot be in the future";
+                  },
+                })}
+              />
+              {errors.immediateFormerPresidentBirthDate && (
+                <span className={css.error}>
+                  {errors.immediateFormerPresidentBirthDate.message}
                 </span>
               )}
             </div>
@@ -1392,30 +1479,6 @@ export default function App() {
               {errors.immediateFormerPresidentSpouseName && (
                 <span className={css.error}>
                   {errors.immediateFormerPresidentSpouseName.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Immediate Former President's Birth Date</h5>
-              <input
-                type="date"
-                {...register("immediateFormerPresidentBirthDate", {
-                  required: false, // The field is not required
-                  validate: (value) => {
-                    if (!value) {
-                      // If no value is selected, validation passes
-                      return true;
-                    }
-                    const date = new Date(value);
-                    const now = new Date();
-                    return date < now || "Birth date cannot be in the future";
-                  },
-                })}
-              />
-              {errors.immediateFormerPresidentBirthDate && (
-                <span className={css.error}>
-                  {errors.immediateFormerPresidentBirthDate.message}
                 </span>
               )}
             </div>
@@ -1485,7 +1548,7 @@ export default function App() {
                 type="text"
                 placeholder="Name"
                 {...register("founderPresidentName", {
-                  required: "Founder President Name is required",
+                  //required: "Founder President Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -1507,7 +1570,9 @@ export default function App() {
                 type="file"
                 accept="image/*"
                 {...register("founderPresidentPhoto", {})}
-                onChange={(e) => handleFileChange(e, "founderPresidentPhoto")} // Unique field name
+                onChange={(e) =>
+                  handleImageFileChange(e, "founderPresidentPhoto")
+                }
               />
               {errors.founderPresidentPhoto && (
                 <span className={css.error}>
@@ -1536,7 +1601,7 @@ export default function App() {
                 type="text"
                 placeholder="Address"
                 {...register("founderPresidentAddress", {
-                  required: "Address is required",
+                  //required: "Address is required",
                 })}
               />
               {errors.founderPresidentAddress && (
@@ -1554,70 +1619,12 @@ export default function App() {
                 {...register("founderPresidentPinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.founderPresidentPinCode && (
                 <span className={css.error}>
                   {errors.founderPresidentPinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("founderPresidentPhone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.founderPresidentPhone && (
-                <span className={css.error}>
-                  {errors.founderPresidentPhone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>
-                Whatsapp/Mobile No.
-                <RequiredField />
-              </h5>
-              <input
-                type="text"
-                placeholder="Whatsapp/Mobile No."
-                {...register("founderPresidentWhatsapp", {
-                  required: "Whatsapp/Mobile No. is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.founderPresidentWhatsapp && (
-                <span className={css.error}>
-                  {errors.founderPresidentWhatsapp.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Mobile</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("founderPresidentMobile", {
-                  //required: "Addtional Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-                onChange={handleFounderPresidentMobile}
-              />
-              {errors.founderPresidentMobile && (
-                <span className={css.error}>
-                  {errors.founderPresidentMobile.message}
                 </span>
               )}
             </div>
@@ -1637,6 +1644,77 @@ export default function App() {
               {errors.founderPresidentEmail && (
                 <span className={css.error}>
                   {errors.founderPresidentEmail.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Whatsapp/Mobile No. <RequiredField />
+              </h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("founderPresidentWhatsapp", {
+                    required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.founderPresidentWhatsapp && (
+                <span className={css.error}>
+                  {errors.founderPresidentWhatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Addtional Mobile No. <RequiredField />
+              </h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("founderPresidentAddtionalMobile", {
+                    required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.founderPresidentAddtionalMobile && (
+                <span className={css.error}>
+                  {errors.founderPresidentAddtionalMobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Founder President's Birth Date
+                <RequiredField />
+              </h5>
+              <input
+                type="date"
+                {...register("founderPresidentBirthDate", {
+                  //required: "Birth Date is required",
+                  validate: (value) => {
+                    const date = new Date(value);
+                    const now = new Date();
+                    return date < now || "Birth date cannot be in the future";
+                  },
+                })}
+              />
+              {errors.founderPresidentBirthDate && (
+                <span className={css.error}>
+                  {errors.founderPresidentBirthDate.message}
                 </span>
               )}
             </div>
@@ -1680,34 +1758,11 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>
-                Founder President's Birth Date
-                <RequiredField />
-              </h5>
-              <input
-                type="date"
-                {...register("founderPresidentBirthDate", {
-                  required: "Birth Date is required",
-                  validate: (value) => {
-                    const date = new Date(value);
-                    const now = new Date();
-                    return date < now || "Birth date cannot be in the future";
-                  },
-                })}
-              />
-              {errors.founderPresidentBirthDate && (
-                <span className={css.error}>
-                  {errors.founderPresidentBirthDate.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
               <h5>Spouse's Birth Date</h5>
               <input
                 type="date"
                 {...register("founderPresidentSpouseBirthDate", {
-                  required: false, // The field is not required
+                  //required: false, // The field is not required
                   validate: (value) => {
                     if (!value) {
                       // If no value is selected, validation passes
@@ -1755,7 +1810,7 @@ export default function App() {
 
           {/*Nominated Former President 1 */}
           <div className={css["form-section"]}>
-            <h3>(5) Nominated Former President - 1</h3>
+            <h3>(4) Nominated Former President - 1</h3>
 
             <div className={css["form-group"]}>
               <h5>Name</h5>
@@ -1784,8 +1839,8 @@ export default function App() {
                 accept="image/*"
                 {...register("nominatedFormerPresident1Photo", {})}
                 onChange={(e) =>
-                  handleFileChange(e, "nominatedFormerPresident1Photo")
-                } // Unique field name
+                  handleImageFileChange(e, "nominatedFormerPresident1Photo")
+                }
               />
               {errors.nominatedFormerPresident1Photo && (
                 <span className={css.error}>
@@ -1828,67 +1883,12 @@ export default function App() {
                 {...register("nominatedFormerPresident1PinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.nominatedFormerPresident1PinCode && (
                 <span className={css.error}>
                   {errors.nominatedFormerPresident1PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("nominatedFormerPresident1Phone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.nominatedFormerPresident1Phone && (
-                <span className={css.error}>
-                  {errors.nominatedFormerPresident1Phone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Whatsapp/Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Whatsapp/Mobile No."
-                {...register("nominatedFormerPresident1Whatsapp", {
-                  //required: "Whatsapp/Mobile No. is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.nominatedFormerPresident1Whatsapp && (
-                <span className={css.error}>
-                  {errors.nominatedFormerPresident1Whatsapp.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("nominatedFormerPresident1Mobile", {
-                  //required: "Addtional Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-                onChange={handleNominatedFormerPresident1Mobile}
-              />
-              {errors.nominatedFormerPresident1Mobile && (
-                <span className={css.error}>
-                  {errors.nominatedFormerPresident1Mobile.message}
                 </span>
               )}
             </div>
@@ -1908,6 +1908,77 @@ export default function App() {
               {errors.nominatedFormerPresident1Email && (
                 <span className={css.error}>
                   {errors.nominatedFormerPresident1Email.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Whatsapp/Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("nominatedFormerPresident1Whatsapp", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.nominatedFormerPresident1Whatsapp && (
+                <span className={css.error}>
+                  {errors.nominatedFormerPresident1Whatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField(
+                    "nominatedFormerPresident1AddtionalMobile",
+                    {
+                      //required: "Whatsapp/Mobile No. is required",
+                      isMobile: true,
+                      pattern: validationPatterns.mobile,
+                    }
+                  )}
+                />
+              </div>
+              {errors.nominatedFormerPresident1AddtionalMobile && (
+                <span className={css.error}>
+                  {errors.nominatedFormerPresident1AddtionalMobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Nominated Former President 1 's Birth Date</h5>
+              <input
+                type="date"
+                {...register("nominatedFormerPresident1BirthDate", {
+                  required: false, // The field is not required
+                  validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
+                    const date = new Date(value);
+                    const now = new Date();
+                    return date < now || "Birth date cannot be in the future";
+                  },
+                })}
+              />
+              {errors.nominatedFormerPresident1BirthDate && (
+                <span className={css.error}>
+                  {errors.nominatedFormerPresident1BirthDate.message}
                 </span>
               )}
             </div>
@@ -1946,30 +2017,6 @@ export default function App() {
               {errors.nominatedFormerPresident1SpouseName && (
                 <span className={css.error}>
                   {errors.nominatedFormerPresident1SpouseName.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Nominated Former President 1 's Birth Date</h5>
-              <input
-                type="date"
-                {...register("nominatedFormerPresident1BirthDate", {
-                  required: false, // The field is not required
-                  validate: (value) => {
-                    if (!value) {
-                      // If no value is selected, validation passes
-                      return true;
-                    }
-                    const date = new Date(value);
-                    const now = new Date();
-                    return date < now || "Birth date cannot be in the future";
-                  },
-                })}
-              />
-              {errors.nominatedFormerPresident1BirthDate && (
-                <span className={css.error}>
-                  {errors.nominatedFormerPresident1BirthDate.message}
                 </span>
               )}
             </div>
@@ -2056,8 +2103,8 @@ export default function App() {
                 accept="image/*"
                 {...register("nominatedFormerPresident2Photo", {})}
                 onChange={(e) =>
-                  handleFileChange(e, "nominatedFormerPresident2Photo")
-                } // Unique field name
+                  handleImageFileChange(e, "nominatedFormerPresident2Photo")
+                }
               />
               {errors.nominatedFormerPresident2Photo && (
                 <span className={css.error}>
@@ -2100,67 +2147,12 @@ export default function App() {
                 {...register("nominatedFormerPresident2PinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.nominatedFormerPresident2PinCode && (
                 <span className={css.error}>
                   {errors.nominatedFormerPresident2PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("nominatedFormerPresident2Phone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.nominatedFormerPresident2Phone && (
-                <span className={css.error}>
-                  {errors.nominatedFormerPresident2Phone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Whatsapp/Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Whatsapp/Mobile No."
-                {...register("nominatedFormerPresident2Whatsapp", {
-                  //required: "Whatsapp/Mobile No. is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.nominatedFormerPresident2Whatsapp && (
-                <span className={css.error}>
-                  {errors.nominatedFormerPresident2Whatsapp.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("nominatedFormerPresident2Mobile", {
-                  //required: "Addtional Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-                onChange={handleNominatedFormerPresident2Mobile}
-              />
-              {errors.nominatedFormerPresident2Mobile && (
-                <span className={css.error}>
-                  {errors.nominatedFormerPresident2Mobile.message}
                 </span>
               )}
             </div>
@@ -2180,6 +2172,77 @@ export default function App() {
               {errors.nominatedFormerPresident2Email && (
                 <span className={css.error}>
                   {errors.nominatedFormerPresident2Email.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Whatsapp/Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("nominatedFormerPresident2Whatsapp", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.nominatedFormerPresident2Whatsapp && (
+                <span className={css.error}>
+                  {errors.nominatedFormerPresident2Whatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField(
+                    "nominatedFormerPresident2AddtionalMobile",
+                    {
+                      //required: "Whatsapp/Mobile No. is required",
+                      isMobile: true,
+                      pattern: validationPatterns.mobile,
+                    }
+                  )}
+                />
+              </div>
+              {errors.nominatedFormerPresident2AddtionalMobile && (
+                <span className={css.error}>
+                  {errors.nominatedFormerPresident2AddtionalMobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Nominated Former President 2 's Birth Date</h5>
+              <input
+                type="date"
+                {...register("nominatedFormerPresident2BirthDate", {
+                  required: false, // The field is not required
+                  validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
+                    const date = new Date(value);
+                    const now = new Date();
+                    return date < now || "Birth date cannot be in the future";
+                  },
+                })}
+              />
+              {errors.nominatedFormerPresident2BirthDate && (
+                <span className={css.error}>
+                  {errors.nominatedFormerPresident2BirthDate.message}
                 </span>
               )}
             </div>
@@ -2218,30 +2281,6 @@ export default function App() {
               {errors.nominatedFormerPresident2SpouseName && (
                 <span className={css.error}>
                   {errors.nominatedFormerPresident2SpouseName.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Nominated Former President 2 's Birth Date</h5>
-              <input
-                type="date"
-                {...register("nominatedFormerPresident2BirthDate", {
-                  required: false, // The field is not required
-                  validate: (value) => {
-                    if (!value) {
-                      // If no value is selected, validation passes
-                      return true;
-                    }
-                    const date = new Date(value);
-                    const now = new Date();
-                    return date < now || "Birth date cannot be in the future";
-                  },
-                })}
-              />
-              {errors.nominatedFormerPresident2BirthDate && (
-                <span className={css.error}>
-                  {errors.nominatedFormerPresident2BirthDate.message}
                 </span>
               )}
             </div>
@@ -2328,8 +2367,8 @@ export default function App() {
                 accept="image/*"
                 {...register("nominatedFormerPresident3Photo", {})}
                 onChange={(e) =>
-                  handleFileChange(e, "nominatedFormerPresident3Photo")
-                } // Unique field name
+                  handleImageFileChange(e, "nominatedFormerPresident3Photo")
+                }
               />
               {errors.nominatedFormerPresident3Photo && (
                 <span className={css.error}>
@@ -2372,67 +2411,12 @@ export default function App() {
                 {...register("nominatedFormerPresident3PinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.nominatedFormerPresident3PinCode && (
                 <span className={css.error}>
                   {errors.nominatedFormerPresident3PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("nominatedFormerPresident3Phone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.nominatedFormerPresident3Phone && (
-                <span className={css.error}>
-                  {errors.nominatedFormerPresident3Phone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Whatsapp/Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Whatsapp/Mobile No."
-                {...register("nominatedFormerPresident3Whatsapp", {
-                  //required: "Whatsapp/Mobile No. is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.nominatedFormerPresident3Whatsapp && (
-                <span className={css.error}>
-                  {errors.nominatedFormerPresident3Whatsapp.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("nominatedFormerPresident3Mobile", {
-                  //required: "Addtional Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-                onChange={handleNominatedFormerPresident3Mobile}
-              />
-              {errors.nominatedFormerPresident3Mobile && (
-                <span className={css.error}>
-                  {errors.nominatedFormerPresident3Mobile.message}
                 </span>
               )}
             </div>
@@ -2452,6 +2436,77 @@ export default function App() {
               {errors.nominatedFormerPresident3Email && (
                 <span className={css.error}>
                   {errors.nominatedFormerPresident3Email.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Whatsapp/Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("nominatedFormerPresident3Whatsapp", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.nominatedFormerPresident3Whatsapp && (
+                <span className={css.error}>
+                  {errors.nominatedFormerPresident3Whatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField(
+                    "nominatedFormerPresident3AddtionalMobile",
+                    {
+                      //required: "Whatsapp/Mobile No. is required",
+                      isMobile: true,
+                      pattern: validationPatterns.mobile,
+                    }
+                  )}
+                />
+              </div>
+              {errors.nominatedFormerPresident3AddtionalMobile && (
+                <span className={css.error}>
+                  {errors.nominatedFormerPresident3AddtionalMobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Nominated Former President 3 's Birth Date</h5>
+              <input
+                type="date"
+                {...register("nominatedFormerPresident3BirthDate", {
+                  required: false, // The field is not required
+                  validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
+                    const date = new Date(value);
+                    const now = new Date();
+                    return date < now || "Birth date cannot be in the future";
+                  },
+                })}
+              />
+              {errors.nominatedFormerPresident3BirthDate && (
+                <span className={css.error}>
+                  {errors.nominatedFormerPresident3BirthDate.message}
                 </span>
               )}
             </div>
@@ -2490,30 +2545,6 @@ export default function App() {
               {errors.nominatedFormerPresident3SpouseName && (
                 <span className={css.error}>
                   {errors.nominatedFormerPresident3SpouseName.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Nominated Former President 3 's Birth Date</h5>
-              <input
-                type="date"
-                {...register("nominatedFormerPresident3BirthDate", {
-                  required: false, // The field is not required
-                  validate: (value) => {
-                    if (!value) {
-                      // If no value is selected, validation passes
-                      return true;
-                    }
-                    const date = new Date(value);
-                    const now = new Date();
-                    return date < now || "Birth date cannot be in the future";
-                  },
-                })}
-              />
-              {errors.nominatedFormerPresident3BirthDate && (
-                <span className={css.error}>
-                  {errors.nominatedFormerPresident3BirthDate.message}
                 </span>
               )}
             </div>
@@ -2584,7 +2615,7 @@ export default function App() {
                 type="text"
                 placeholder="Name"
                 {...register("vicePresidentName", {
-                  required: "Vice President Name is required",
+                  //required: "Vice President Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -2606,7 +2637,7 @@ export default function App() {
                 type="file"
                 accept="image/*"
                 {...register("vicePresidentPhoto", {})}
-                onChange={(e) => handleFileChange(e, "vicePresidentPhoto")} // Unique field name
+                onChange={(e) => handleImageFileChange(e, "vicePresidentPhoto")}
               />
               {errors.vicePresidentPhoto && (
                 <span className={css.error}>
@@ -2635,7 +2666,7 @@ export default function App() {
                 type="text"
                 placeholder="Address"
                 {...register("vicePresidentAddress", {
-                  required: "Address is required",
+                  //required: "Address is required",
                 })}
               />
               {errors.vicePresidentAddress && (
@@ -2653,70 +2684,12 @@ export default function App() {
                 {...register("vicePresidentPinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.vicePresidentPinCode && (
                 <span className={css.error}>
                   {errors.vicePresidentPinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("vicePresidentPhone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.vicePresidentPhone && (
-                <span className={css.error}>
-                  {errors.vicePresidentPhone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>
-                Whatsapp/Mobile No.
-                <RequiredField />
-              </h5>
-              <input
-                type="text"
-                placeholder="Whatsapp/Mobile No."
-                {...register("vicePresidentWhatsapp", {
-                  required: "Whatsapp/Mobile No. is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.vicePresidentWhatsapp && (
-                <span className={css.error}>
-                  {errors.vicePresidentWhatsapp.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("vicePresidentMobile", {
-                  //required: "Addtional Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-                onChange={handleVicePresidentMobile}
-              />
-              {errors.vicePresidentMobile && (
-                <span className={css.error}>
-                  {errors.vicePresidentMobile.message}
                 </span>
               )}
             </div>
@@ -2736,6 +2709,75 @@ export default function App() {
               {errors.vicePresidentEmail && (
                 <span className={css.error}>
                   {errors.vicePresidentEmail.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Whatsapp/Mobile No. <RequiredField />
+              </h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("vicePresidentWhatsapp", {
+                    required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.vicePresidentWhatsapp && (
+                <span className={css.error}>
+                  {errors.vicePresidentWhatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("vicePresidentAddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.vicePresidentAddtionalMobile && (
+                <span className={css.error}>
+                  {errors.vicePresidentAddtionalMobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Vice President's Birth Date
+                <RequiredField />
+              </h5>
+              <input
+                type="date"
+                {...register("vicePresidentBirthDate", {
+                  //required: "Birth Date is required",
+                  validate: (value) => {
+                    const date = new Date(value);
+                    const now = new Date();
+                    return date < now || "Birth date cannot be in the future";
+                  },
+                })}
+              />
+              {errors.vicePresidentBirthDate && (
+                <span className={css.error}>
+                  {errors.vicePresidentBirthDate.message}
                 </span>
               )}
             </div>
@@ -2774,29 +2816,6 @@ export default function App() {
               {errors.vicePresidentSpouseName && (
                 <span className={css.error}>
                   {errors.vicePresidentSpouseName.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>
-                Vice President's Birth Date
-                <RequiredField />
-              </h5>
-              <input
-                type="date"
-                {...register("vicePresidentBirthDate", {
-                  required: "Birth Date is required",
-                  validate: (value) => {
-                    const date = new Date(value);
-                    const now = new Date();
-                    return date < now || "Birth date cannot be in the future";
-                  },
-                })}
-              />
-              {errors.vicePresidentBirthDate && (
-                <span className={css.error}>
-                  {errors.vicePresidentBirthDate.message}
                 </span>
               )}
             </div>
@@ -2866,7 +2885,7 @@ export default function App() {
                 type="text"
                 placeholder="Name"
                 {...register("secretaryName", {
-                  required: "Secretary Name is required",
+                  //required: "Secretary Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -2888,7 +2907,7 @@ export default function App() {
                 type="file"
                 accept="image/*"
                 {...register("secretaryPhoto", {})}
-                onChange={(e) => handleFileChange(e, "secretaryPhoto")} // Unique field name
+                onChange={(e) => handleImageFileChange(e, "secretaryPhoto")}
               />
               {errors.secretaryPhoto && (
                 <span className={css.error}>
@@ -2917,7 +2936,7 @@ export default function App() {
                 type="text"
                 placeholder="Address"
                 {...register("secretaryAddress", {
-                  required: "Address is required",
+                  //required: "Address is required",
                 })}
               />
               {errors.secretaryAddress && (
@@ -2935,70 +2954,12 @@ export default function App() {
                 {...register("secretaryPinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.secretaryPinCode && (
                 <span className={css.error}>
                   {errors.secretaryPinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("secretaryPhone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.secretaryPhone && (
-                <span className={css.error}>
-                  {errors.secretaryPhone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>
-                Whatsapp/Mobile No.
-                <RequiredField />
-              </h5>
-              <input
-                type="text"
-                placeholder="Whatsapp/Mobile No."
-                {...register("secretaryWhatsapp", {
-                  required: "Whatsapp/Mobile No. is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.secretaryWhatsapp && (
-                <span className={css.error}>
-                  {errors.secretaryWhatsapp.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("secretaryMobile", {
-                  //required: "Addtional Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-                onChange={handleSecretaryMobile}
-              />
-              {errors.secretaryMobile && (
-                <span className={css.error}>
-                  {errors.secretaryMobile.message}
                 </span>
               )}
             </div>
@@ -3018,6 +2979,75 @@ export default function App() {
               {errors.secretaryEmail && (
                 <span className={css.error}>
                   {errors.secretaryEmail.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Whatsapp/Mobile No. <RequiredField />
+              </h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("secretaryWhatsapp", {
+                    required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.secretaryWhatsapp && (
+                <span className={css.error}>
+                  {errors.secretaryWhatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("secretaryAddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.secretaryAddtionalMobile && (
+                <span className={css.error}>
+                  {errors.secretaryAddtionalMobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Secretary's Birth Date
+                <RequiredField />
+              </h5>
+              <input
+                type="date"
+                {...register("secretaryBirthDate", {
+                  //required: "Birth Date is required",
+                  validate: (value) => {
+                    const date = new Date(value);
+                    const now = new Date();
+                    return date < now || "Birth date cannot be in the future";
+                  },
+                })}
+              />
+              {errors.secretaryBirthDate && (
+                <span className={css.error}>
+                  {errors.secretaryBirthDate.message}
                 </span>
               )}
             </div>
@@ -3056,29 +3086,6 @@ export default function App() {
               {errors.secretarySpouseName && (
                 <span className={css.error}>
                   {errors.secretarySpouseName.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>
-                Secretary's Birth Date
-                <RequiredField />
-              </h5>
-              <input
-                type="date"
-                {...register("secretaryBirthDate", {
-                  required: "Birth Date is required",
-                  validate: (value) => {
-                    const date = new Date(value);
-                    const now = new Date();
-                    return date < now || "Birth date cannot be in the future";
-                  },
-                })}
-              />
-              {errors.secretaryBirthDate && (
-                <span className={css.error}>
-                  {errors.secretaryBirthDate.message}
                 </span>
               )}
             </div>
@@ -3171,7 +3178,9 @@ export default function App() {
                 type="file"
                 accept="image/*"
                 {...register("jointSecretaryPhoto", {})}
-                onChange={(e) => handleFileChange(e, "jointSecretaryPhoto")} // Unique field name
+                onChange={(e) =>
+                  handleImageFileChange(e, "jointSecretaryPhoto")
+                }
               />
               {errors.jointSecretaryPhoto && (
                 <span className={css.error}>
@@ -3218,70 +3227,12 @@ export default function App() {
                 {...register("jointSecretaryPinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.jointSecretaryPinCode && (
                 <span className={css.error}>
                   {errors.jointSecretaryPinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("jointSecretaryPhone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.jointSecretaryPhone && (
-                <span className={css.error}>
-                  {errors.jointSecretaryPhone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>
-                Whatsapp/Mobile No.
-                <RequiredField />
-              </h5>
-              <input
-                type="text"
-                placeholder="Whatsapp/Mobile No."
-                {...register("jointSecretaryWhatsapp", {
-                  required: "Whatsapp/Mobile No. is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.jointSecretaryWhatsapp && (
-                <span className={css.error}>
-                  {errors.jointSecretaryWhatsapp.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("jointSecretaryMobile", {
-                  //required: "Addtional Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-                onChange={handleJointSecretaryMobile}
-              />
-              {errors.jointSecretaryMobile && (
-                <span className={css.error}>
-                  {errors.jointSecretaryMobile.message}
                 </span>
               )}
             </div>
@@ -3301,6 +3252,75 @@ export default function App() {
               {errors.jointSecretaryEmail && (
                 <span className={css.error}>
                   {errors.jointSecretaryEmail.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Whatsapp/Mobile No. <RequiredField />
+              </h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("jointSecretaryWhatsapp", {
+                    required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.jointSecretaryWhatsapp && (
+                <span className={css.error}>
+                  {errors.jointSecretaryWhatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("jointSecretaryAddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.jointSecretaryAddtionalMobile && (
+                <span className={css.error}>
+                  {errors.jointSecretaryAddtionalMobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Joint Secretary's Birth Date
+                <RequiredField />
+              </h5>
+              <input
+                type="date"
+                {...register("jointSecretaryBirthDate", {
+                  required: "Birth Date is required",
+                  validate: (value) => {
+                    const date = new Date(value);
+                    const now = new Date();
+                    return date < now || "Birth date cannot be in the future";
+                  },
+                })}
+              />
+              {errors.jointSecretaryBirthDate && (
+                <span className={css.error}>
+                  {errors.jointSecretaryBirthDate.message}
                 </span>
               )}
             </div>
@@ -3339,29 +3359,6 @@ export default function App() {
               {errors.jointSecretarySpouseName && (
                 <span className={css.error}>
                   {errors.jointSecretarySpouseName.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>
-                Joint Secretary's Birth Date
-                <RequiredField />
-              </h5>
-              <input
-                type="date"
-                {...register("jointSecretaryBirthDate", {
-                  required: "Birth Date is required",
-                  validate: (value) => {
-                    const date = new Date(value);
-                    const now = new Date();
-                    return date < now || "Birth date cannot be in the future";
-                  },
-                })}
-              />
-              {errors.jointSecretaryBirthDate && (
-                <span className={css.error}>
-                  {errors.jointSecretaryBirthDate.message}
                 </span>
               )}
             </div>
@@ -3453,7 +3450,7 @@ export default function App() {
                 type="file"
                 accept="image/*"
                 {...register("treasurerPhoto", {})}
-                onChange={(e) => handleFileChange(e, "treasurerPhoto")} // Unique field name
+                onChange={(e) => handleImageFileChange(e, "treasurerPhoto")}
               />
               {errors.treasurerPhoto && (
                 <span className={css.error}>
@@ -3500,70 +3497,12 @@ export default function App() {
                 {...register("treasurerPinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.treasurerPinCode && (
                 <span className={css.error}>
                   {errors.treasurerPinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("treasurerPhone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.treasurerPhone && (
-                <span className={css.error}>
-                  {errors.treasurerPhone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>
-                Whatsapp/Mobile No.
-                <RequiredField />
-              </h5>
-              <input
-                type="text"
-                placeholder="Whatsapp/Mobile No."
-                {...register("treasurerWhatsapp", {
-                  required: "Whatsapp/Mobile No. is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.treasurerWhatsapp && (
-                <span className={css.error}>
-                  {errors.treasurerWhatsapp.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("treasurerMobile", {
-                  //required: "Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-                onChange={handleTreasurerMobile}
-              />
-              {errors.treasurerMobile && (
-                <span className={css.error}>
-                  {errors.treasurerMobile.message}
                 </span>
               )}
             </div>
@@ -3583,6 +3522,75 @@ export default function App() {
               {errors.treasurerEmail && (
                 <span className={css.error}>
                   {errors.treasurerEmail.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Whatsapp/Mobile No. <RequiredField />
+              </h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("treasurerWhatsapp", {
+                    required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.treasurerWhatsapp && (
+                <span className={css.error}>
+                  {errors.treasurerWhatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("treasurerAddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.treasurerAddtionalMobile && (
+                <span className={css.error}>
+                  {errors.treasurerAddtionalMobile.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>
+                Treasurer's Birth Date
+                <RequiredField />
+              </h5>
+              <input
+                type="date"
+                {...register("treasurerBirthDate", {
+                  required: "Birth Date is required",
+                  validate: (value) => {
+                    const date = new Date(value);
+                    const now = new Date();
+                    return date < now || "Birth date cannot be in the future";
+                  },
+                })}
+              />
+              {errors.treasurerBirthDate && (
+                <span className={css.error}>
+                  {errors.treasurerBirthDate.message}
                 </span>
               )}
             </div>
@@ -3621,29 +3629,6 @@ export default function App() {
               {errors.treasurerSpouseName && (
                 <span className={css.error}>
                   {errors.treasurerSpouseName.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>
-                Treasurer's Birth Date
-                <RequiredField />
-              </h5>
-              <input
-                type="date"
-                {...register("treasurerBirthDate", {
-                  required: "Birth Date is required",
-                  validate: (value) => {
-                    const date = new Date(value);
-                    const now = new Date();
-                    return date < now || "Birth date cannot be in the future";
-                  },
-                })}
-              />
-              {errors.treasurerBirthDate && (
-                <span className={css.error}>
-                  {errors.treasurerBirthDate.message}
                 </span>
               )}
             </div>
@@ -3744,48 +3729,12 @@ export default function App() {
                 {...register("committeemember1PinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.committeemember1PinCode && (
                 <span className={css.error}>
                   {errors.committeemember1PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("committeemember1Phone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember1Phone && (
-                <span className={css.error}>
-                  {errors.committeemember1Phone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("committeemember1Mobile", {
-                  //required: "Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember1Mobile && (
-                <span className={css.error}>
-                  {errors.committeemember1Mobile.message}
                 </span>
               )}
             </div>
@@ -3805,6 +3754,50 @@ export default function App() {
               {errors.committeemember1Email && (
                 <span className={css.error}>
                   {errors.committeemember1Email.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Whatsapp/Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember1Whatsapp", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember1Whatsapp && (
+                <span className={css.error}>
+                  {errors.committeemember1Whatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember1AddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember1AddtionalMobile && (
+                <span className={css.error}>
+                  {errors.committeemember1AddtionalMobile.message}
                 </span>
               )}
             </div>
@@ -3855,48 +3848,12 @@ export default function App() {
                 {...register("committeemember2PinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.committeemember2PinCode && (
                 <span className={css.error}>
                   {errors.committeemember2PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("committeemember2Phone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember2Phone && (
-                <span className={css.error}>
-                  {errors.committeemember2Phone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("committeemember2Mobile", {
-                  //required: "Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember2Mobile && (
-                <span className={css.error}>
-                  {errors.committeemember2Mobile.message}
                 </span>
               )}
             </div>
@@ -3916,6 +3873,50 @@ export default function App() {
               {errors.committeemember2Email && (
                 <span className={css.error}>
                   {errors.committeemember2Email.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Whatsapp/Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember2Whatsapp", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember2Whatsapp && (
+                <span className={css.error}>
+                  {errors.committeemember2Whatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember2AddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember2AddtionalMobile && (
+                <span className={css.error}>
+                  {errors.committeemember2AddtionalMobile.message}
                 </span>
               )}
             </div>
@@ -3966,48 +3967,12 @@ export default function App() {
                 {...register("committeemember3PinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.committeemember3PinCode && (
                 <span className={css.error}>
                   {errors.committeemember3PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("committeemember3Phone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember3Phone && (
-                <span className={css.error}>
-                  {errors.committeemember3Phone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("committeemember3Mobile", {
-                  //required: "Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember3Mobile && (
-                <span className={css.error}>
-                  {errors.committeemember3Mobile.message}
                 </span>
               )}
             </div>
@@ -4027,6 +3992,50 @@ export default function App() {
               {errors.committeemember3Email && (
                 <span className={css.error}>
                   {errors.committeemember3Email.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Whatsapp/Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember3Whatsapp", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember3Whatsapp && (
+                <span className={css.error}>
+                  {errors.committeemember3Whatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember3AddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember3AddtionalMobile && (
+                <span className={css.error}>
+                  {errors.committeemember3AddtionalMobile.message}
                 </span>
               )}
             </div>
@@ -4077,48 +4086,12 @@ export default function App() {
                 {...register("committeemember4PinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.committeemember4PinCode && (
                 <span className={css.error}>
                   {errors.committeemember4PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("committeemember4Phone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember4Phone && (
-                <span className={css.error}>
-                  {errors.committeemember4Phone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("committeemember4Mobile", {
-                  //required: "Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember4Mobile && (
-                <span className={css.error}>
-                  {errors.committeemember4Mobile.message}
                 </span>
               )}
             </div>
@@ -4138,6 +4111,50 @@ export default function App() {
               {errors.committeemember4Email && (
                 <span className={css.error}>
                   {errors.committeemember4Email.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Whatsapp/Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember4Whatsapp", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember4Whatsapp && (
+                <span className={css.error}>
+                  {errors.committeemember4Whatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember4AddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember4AddtionalMobile && (
+                <span className={css.error}>
+                  {errors.committeemember4AddtionalMobile.message}
                 </span>
               )}
             </div>
@@ -4188,48 +4205,12 @@ export default function App() {
                 {...register("committeemember5PinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.committeemember5PinCode && (
                 <span className={css.error}>
                   {errors.committeemember5PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("committeemember5Phone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember5Phone && (
-                <span className={css.error}>
-                  {errors.committeemember5Phone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("committeemember5Mobile", {
-                  //required: "Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember5Mobile && (
-                <span className={css.error}>
-                  {errors.committeemember5Mobile.message}
                 </span>
               )}
             </div>
@@ -4249,6 +4230,50 @@ export default function App() {
               {errors.committeemember5Email && (
                 <span className={css.error}>
                   {errors.committeemember5Email.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Whatsapp/Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember5Whatsapp", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember5Whatsapp && (
+                <span className={css.error}>
+                  {errors.committeemember5Whatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember5AddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember5AddtionalMobile && (
+                <span className={css.error}>
+                  {errors.committeemember5AddtionalMobile.message}
                 </span>
               )}
             </div>
@@ -4299,48 +4324,12 @@ export default function App() {
                 {...register("committeemember6PinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.committeemember6PinCode && (
                 <span className={css.error}>
                   {errors.committeemember6PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("committeemember6Phone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember6Phone && (
-                <span className={css.error}>
-                  {errors.committeemember6Phone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("committeemember6Mobile", {
-                  //required: "Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember6Mobile && (
-                <span className={css.error}>
-                  {errors.committeemember6Mobile.message}
                 </span>
               )}
             </div>
@@ -4360,6 +4349,50 @@ export default function App() {
               {errors.committeemember6Email && (
                 <span className={css.error}>
                   {errors.committeemember6Email.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Whatsapp/Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember6Whatsapp", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember6Whatsapp && (
+                <span className={css.error}>
+                  {errors.committeemember6Whatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember6AddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember6AddtionalMobile && (
+                <span className={css.error}>
+                  {errors.committeemember6AddtionalMobile.message}
                 </span>
               )}
             </div>
@@ -4410,48 +4443,12 @@ export default function App() {
                 {...register("committeemember7PinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.committeemember7PinCode && (
                 <span className={css.error}>
                   {errors.committeemember7PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("committeemember7Phone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember7Phone && (
-                <span className={css.error}>
-                  {errors.committeemember7Phone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("committeemember7Mobile", {
-                  //required: "Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember7Mobile && (
-                <span className={css.error}>
-                  {errors.committeemember7Mobile.message}
                 </span>
               )}
             </div>
@@ -4471,6 +4468,50 @@ export default function App() {
               {errors.committeemember7Email && (
                 <span className={css.error}>
                   {errors.committeemember7Email.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Whatsapp/Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember7Whatsapp", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember7Whatsapp && (
+                <span className={css.error}>
+                  {errors.committeemember7Whatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember7AddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember7AddtionalMobile && (
+                <span className={css.error}>
+                  {errors.committeemember7AddtionalMobile.message}
                 </span>
               )}
             </div>
@@ -4521,48 +4562,12 @@ export default function App() {
                 {...register("committeemember8PinCode", {
                   //required: "Pin Code is required",
                   isMobile: true,
-                  pattern: validationPatterns.mobile,
+                  pattern: validationPatterns.pincode,
                 })}
               />
               {errors.committeemember8PinCode && (
                 <span className={css.error}>
                   {errors.committeemember8PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Phone (with STD)</h5>
-              <input
-                type="text"
-                placeholder="Phone (with STD)"
-                {...register("committeemember8Phone", {
-                  //required: "Phone (with STD) is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember8Phone && (
-                <span className={css.error}>
-                  {errors.committeemember8Phone.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Addtional Mobile No.</h5>
-              <input
-                type="text"
-                placeholder="Mobile"
-                {...register("committeemember8Mobile", {
-                  //required: "Mobile is required",
-                  isMobile: true,
-                  pattern: validationPatterns.mobile,
-                })}
-              />
-              {errors.committeemember8Mobile && (
-                <span className={css.error}>
-                  {errors.committeemember8Mobile.message}
                 </span>
               )}
             </div>
@@ -4582,6 +4587,50 @@ export default function App() {
               {errors.committeemember8Email && (
                 <span className={css.error}>
                   {errors.committeemember8Email.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Whatsapp/Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember8Whatsapp", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember8Whatsapp && (
+                <span className={css.error}>
+                  {errors.committeemember8Whatsapp.message}
+                </span>
+              )}
+            </div>
+
+            <div className={css["form-group"]}>
+              <h5>Addtional Mobile No.</h5>
+              <div className={css["phone-input-container"]}>
+                <div className={css["phone-prefix"]}>+91</div>
+                <input
+                  type="text"
+                  className={css["phone-input"]}
+                  placeholder="Enter 10 digit number"
+                  {...registerField("committeemember8AddtionalMobile", {
+                    //required: "Whatsapp/Mobile No. is required",
+                    isMobile: true,
+                    pattern: validationPatterns.mobile,
+                  })}
+                />
+              </div>
+              {errors.committeemember8AddtionalMobile && (
+                <span className={css.error}>
+                  {errors.committeemember8AddtionalMobile.message}
                 </span>
               )}
             </div>
