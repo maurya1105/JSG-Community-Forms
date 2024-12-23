@@ -36,6 +36,10 @@ const RequiredField = () => (
 );
 
 export default function App() {
+  useEffect(() => {
+    document.title = "JSGIF Form B";
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -78,42 +82,42 @@ export default function App() {
     }
   };
 
-  // Form submission handler
-  const handleFormSubmit = async (data) => {
-    console.log("Form data before adding Base64:", data); // Debug log
-    const payload = {
-      ...data,
-      presidentPhoto: base64Images.presidentPhoto || null,
-      immediateFormerPresidentPhoto:
-        base64Images.immediateFormerPresidentPhoto || null,
-      founderPresidentPhoto: base64Images.founderPresidentPhoto || null,
-      nominatedFormerPresident1Photo:
-        base64Images.nominatedFormerPresident1Photo || null,
-      nominatedFormerPresident2Photo:
-        base64Images.nominatedFormerPresident2Photo || null,
-      nominatedFormerPresident3Photo:
-        base64Images.nominatedFormerPresident3Photo || null,
-      vicePresidentPhoto: base64Images.vicePresidentPhoto || null,
-      secretaryPhoto: base64Images.secretaryPhoto || null,
-      jointSecretaryPhoto: base64Images.jointSecretaryPhoto || null,
-      treasurerPhoto: base64Images.treasurerPhoto || null,
-    };
+  // // Form submission handler
+  // const handleFormSubmit = async (data) => {
+  //   console.log("Form data before adding Base64:", data); // Debug log
+  //   const payload = {
+  //     ...data,
+  //     presidentPhoto: base64Images.presidentPhoto || null,
+  //     immediateFormerPresidentPhoto:
+  //       base64Images.immediateFormerPresidentPhoto || null,
+  //     founderPresidentPhoto: base64Images.founderPresidentPhoto || null,
+  //     nominatedFormerPresident1Photo:
+  //       base64Images.nominatedFormerPresident1Photo || null,
+  //     nominatedFormerPresident2Photo:
+  //       base64Images.nominatedFormerPresident2Photo || null,
+  //     nominatedFormerPresident3Photo:
+  //       base64Images.nominatedFormerPresident3Photo || null,
+  //     vicePresidentPhoto: base64Images.vicePresidentPhoto || null,
+  //     secretaryPhoto: base64Images.secretaryPhoto || null,
+  //     jointSecretaryPhoto: base64Images.jointSecretaryPhoto || null,
+  //     treasurerPhoto: base64Images.treasurerPhoto || null,
+  //   };
 
-    console.log("Payload to send:", payload); // Debug payload
+  //   console.log("Payload to send:", payload); // Debug payload
 
-    try {
-      const response = await axios.post(
-        "https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/forums",
-        payload,
-        { headers: { "Content-Type": "application/json" } }
-      );
-      console.log("API Response:", response.data); // Log API response
-      alert("Data uploaded successfully!");
-    } catch (error) {
-      console.error("Error uploading data:", error); // Log error
-      alert("Error uploading data.");
-    }
-  };
+  //   try {
+  //     const response = await axios.post(
+  //       "https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/forums",
+  //       payload,
+  //       { headers: { "Content-Type": "application/json" } }
+  //     );
+  //     console.log("API Response:", response.data); // Log API response
+  //     alert("Data uploaded successfully!");
+  //   } catch (error) {
+  //     console.error("Error uploading data:", error); // Log error
+  //     alert("Error uploading data.");
+  //   }
+  // };
 
   // const onSubmit = data => {
   //   console.log('Form submitted with data:', data);
@@ -543,53 +547,45 @@ export default function App() {
   }, [committeemember8Whatsapp, isMobileUpdated, setValue]);
 
   const onSubmit = async (data) => {
+    setIsSubmitting(true); // Show spinner
+
     try {
-      const formData = new FormData();
+      // Prepare payload with base64 images
+      const payload = {
+        ...data,
+        presidentPhoto: base64Images.presidentPhoto || null,
+        immediateFormerPresidentPhoto:
+          base64Images.immediateFormerPresidentPhoto || null,
+        founderPresidentPhoto: base64Images.founderPresidentPhoto || null,
+        nominatedFormerPresident1Photo:
+          base64Images.nominatedFormerPresident1Photo || null,
+        nominatedFormerPresident2Photo:
+          base64Images.nominatedFormerPresident2Photo || null,
+        nominatedFormerPresident3Photo:
+          base64Images.nominatedFormerPresident3Photo || null,
+        vicePresidentPhoto: base64Images.vicePresidentPhoto || null,
+        secretaryPhoto: base64Images.secretaryPhoto || null,
+        jointSecretaryPhoto: base64Images.jointSecretaryPhoto || null,
+        treasurerPhoto: base64Images.treasurerPhoto || null,
+      };
 
-      // Iterate over the object and append fields
-      for (const key in data) {
-        if (data.hasOwnProperty(key)) {
-          if (data[key] instanceof FileList) {
-            // Handle FileList (multiple files)
-            Array.from(data[key]).forEach((file) => {
-              formData.append(key, file);
-            });
-          } else {
-            // Handle other fields
-            formData.append(key, data[key]);
-          }
-        }
-      }
+      console.log("Payload to send:", payload); // Debug log
 
-      // Debugging: Check the content of the FormData
-      for (let pair of formData.entries()) {
-        console.log(`${pair[0]}: ${pair[1]}`);
-      }
-
-      // Send the FormData using Axios
+      // Make API call
       const response = await axios.post(
-        `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/forums`,
-        //`http://localhost:5000/api/forums`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        "https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/forums",
+        payload,
+        { headers: { "Content-Type": "application/json" } }
       );
 
-      setIsSubmitting(true); // Show the spinner
-      console.log("Response:", response.data);
-
-      // Simulate an API call delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      setIsSubmitted(true); // Show the "Download as PDF" button
-      setIsSubmitting(false); // Hide the spinner
-      alert("Form submitted successfully!");
+      console.log("API Response:", response.data); // Debug log
+      alert("Form submitted successfully!"); // Success message
     } catch (error) {
-      console.error("Error submitting form:", error);
-      alert("Failed to submit the form. Please try again.");
+      console.error("Error submitting form:", error); // Error log
+      alert("Failed to submit the form. Please try again."); // Failure message
+    } finally {
+      setIsSubmitted(true); // Show the "Download as PDF" button
+      setIsSubmitting(false); // Hide spinner
     }
   };
 
@@ -599,42 +595,6 @@ export default function App() {
   //   // Allow only numeric input (prevent non-numeric characters)
   //   e.target.value = e.target.value.replace(!/^[+()0-9]*$/, "");
   // };
-
-  const handleImmediateFormerPresidentMobile = (e) => {
-    setIsMobileUpdated(true);
-  };
-
-  const handleFounderPresidentMobile = (e) => {
-    setIsMobileUpdated(true);
-  };
-
-  const handleNominatedFormerPresident1Mobile = (e) => {
-    setIsMobileUpdated(true);
-  };
-
-  const handleNominatedFormerPresident2Mobile = (e) => {
-    setIsMobileUpdated(true);
-  };
-
-  const handleNominatedFormerPresident3Mobile = (e) => {
-    setIsMobileUpdated(true);
-  };
-
-  const handleVicePresidentMobile = (e) => {
-    setIsMobileUpdated(true);
-  };
-
-  const handleSecretaryMobile = (e) => {
-    setIsMobileUpdated(true);
-  };
-
-  const handleJointSecretaryMobile = (e) => {
-    setIsMobileUpdated(true);
-  };
-
-  const handleTreasurerMobile = (e) => {
-    setIsMobileUpdated(true);
-  };
 
   // Image preview handler
   const handleFileChange = (event, fieldName) => {
@@ -754,7 +714,7 @@ export default function App() {
         style={{ padding: "20px", background: "#3f0986", height: "auto" }}
       >
         <form
-          onSubmit={handleSubmit(handleFormSubmit)}
+          onSubmit={handleSubmit(onSubmit)}
           className={css["scrolling-form"]}
         >
           {/* General Info Section */}
@@ -1027,7 +987,9 @@ export default function App() {
 
             {/* President Photo Field */}
             <div className={css["form-group"]}>
-              <h5>Photo</h5>
+              <h5>
+                Photo <RequiredField />
+              </h5>
               <input
                 type="file"
                 accept="image/*"
@@ -1037,7 +999,7 @@ export default function App() {
                 onChange={(e) => handleImageFileChange(e, "presidentPhoto")}
               />
               {errors.presidentPhoto && (
-                <span className={css["text-red-500"]}>
+                <span className={css.error}>
                   {errors.presidentPhoto.message}
                 </span>
               )}
@@ -1135,9 +1097,7 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>
-                Addtional Mobile No. <RequiredField />
-              </h5>
+              <h5>Addtional Mobile No.</h5>
               <div className={css["phone-input-container"]}>
                 <div className={css["phone-prefix"]}>+91</div>
                 <input
@@ -1298,7 +1258,9 @@ export default function App() {
               <input
                 type="file"
                 accept="image/*"
-                {...register("immediateFormerPresidentPhoto", {})}
+                {...register("immediateFormerPresidentPhoto", {
+                  //required: "Photo is required",
+                })}
                 onChange={(e) =>
                   handleImageFileChange(e, "immediateFormerPresidentPhoto")
                 }
@@ -1376,9 +1338,7 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>
-                Whatsapp/Mobile No. <RequiredField />
-              </h5>
+              <h5>Whatsapp/Mobile No.</h5>
               <div className={css["phone-input-container"]}>
                 <div className={css["phone-prefix"]}>+91</div>
                 <input
@@ -1386,7 +1346,7 @@ export default function App() {
                   className={css["phone-input"]}
                   placeholder="Enter 10 digit number"
                   {...registerField("immediateFormerPresidentWhatsapp", {
-                    required: "Whatsapp/Mobile No. is required",
+                    //required: "Whatsapp/Mobile No. is required",
                     isMobile: true,
                     pattern: validationPatterns.mobile,
                   })}
@@ -1548,7 +1508,7 @@ export default function App() {
                 type="text"
                 placeholder="Name"
                 {...register("founderPresidentName", {
-                  //required: "Founder President Name is required",
+                  required: "Founder President Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -1569,7 +1529,9 @@ export default function App() {
               <input
                 type="file"
                 accept="image/*"
-                {...register("founderPresidentPhoto", {})}
+                {...register("founderPresidentPhoto", {
+                  required: "Photo is required",
+                })}
                 onChange={(e) =>
                   handleImageFileChange(e, "founderPresidentPhoto")
                 }
@@ -2615,7 +2577,7 @@ export default function App() {
                 type="text"
                 placeholder="Name"
                 {...register("vicePresidentName", {
-                  //required: "Vice President Name is required",
+                  required: "Vice President Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -2636,7 +2598,9 @@ export default function App() {
               <input
                 type="file"
                 accept="image/*"
-                {...register("vicePresidentPhoto", {})}
+                {...register("vicePresidentPhoto", {
+                  required: "Photo is required",
+                })}
                 onChange={(e) => handleImageFileChange(e, "vicePresidentPhoto")}
               />
               {errors.vicePresidentPhoto && (
@@ -2666,7 +2630,7 @@ export default function App() {
                 type="text"
                 placeholder="Address"
                 {...register("vicePresidentAddress", {
-                  //required: "Address is required",
+                  required: "Address is required",
                 })}
               />
               {errors.vicePresidentAddress && (
@@ -2885,7 +2849,7 @@ export default function App() {
                 type="text"
                 placeholder="Name"
                 {...register("secretaryName", {
-                  //required: "Secretary Name is required",
+                  required: "Secretary Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -2906,7 +2870,9 @@ export default function App() {
               <input
                 type="file"
                 accept="image/*"
-                {...register("secretaryPhoto", {})}
+                {...register("secretaryPhoto", {
+                  required: "Photo is required",
+                })}
                 onChange={(e) => handleImageFileChange(e, "secretaryPhoto")}
               />
               {errors.secretaryPhoto && (
@@ -2936,7 +2902,7 @@ export default function App() {
                 type="text"
                 placeholder="Address"
                 {...register("secretaryAddress", {
-                  //required: "Address is required",
+                  required: "Address is required",
                 })}
               />
               {errors.secretaryAddress && (
@@ -3177,7 +3143,9 @@ export default function App() {
               <input
                 type="file"
                 accept="image/*"
-                {...register("jointSecretaryPhoto", {})}
+                {...register("jointSecretaryPhoto", {
+                  required: "Photo is required",
+                })}
                 onChange={(e) =>
                   handleImageFileChange(e, "jointSecretaryPhoto")
                 }
@@ -3449,7 +3417,9 @@ export default function App() {
               <input
                 type="file"
                 accept="image/*"
-                {...register("treasurerPhoto", {})}
+                {...register("treasurerPhoto", {
+                  required: "Photo is required",
+                })}
                 onChange={(e) => handleImageFileChange(e, "treasurerPhoto")}
               />
               {errors.treasurerPhoto && (
