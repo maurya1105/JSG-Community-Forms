@@ -62,7 +62,7 @@ export default function App() {
   const [submissionMessage, setSubmissionMessage] = useState("");
 
   const successMessage = `
-      Thank you, Form "A" has been successfully submitted. 
+      Thank you, Form "B" has been successfully submitted. 
       We will shortly email you the PDF of the same form submitted.
       For any queries or further details, please contact on +91-XXXXXXXXXX or email us at example@email.com.
     `;
