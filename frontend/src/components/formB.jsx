@@ -58,6 +58,23 @@ export default function App() {
 
   const [base64Images, setBase64Images] = useState({});
 
+  const [submissionStatus, setSubmissionStatus] = useState(null); // "success" or "error"
+  const [submissionMessage, setSubmissionMessage] = useState("");
+
+  const successMessage = `
+      Thank you, Form "A" has been successfully submitted. 
+      We will shortly email you the PDF of the same form submitted.
+      For any queries or further details, please contact on +91-XXXXXXXXXX or email us at example@email.com.
+    `;
+
+  const errorMessages = {
+    networkError:
+      "Unable to connect to the server. Please check your internet connection and try again.",
+    serverError:
+      "There was a server error while processing your form. Please try again later.",
+    unknownError: "An unexpected error occurred. Please try again later.",
+  };
+
   // Handle file selection and Base64 conversion
   const handleImageFileChange = (event, fieldName) => {
     const file = event.target.files[0];
@@ -548,6 +565,9 @@ export default function App() {
 
   const onSubmit = async (data) => {
     setIsSubmitting(true); // Show spinner
+    setSubmissionStatus(null);
+    setSubmissionMessage("");
+    setIsSubmitted(false);
 
     try {
       // Prepare payload with base64 images
@@ -578,13 +598,27 @@ export default function App() {
         { headers: { "Content-Type": "application/json" } }
       );
 
+      if (response.status === 200 || response.status === 201) {
+        setSubmissionStatus("success");
+        setSubmissionMessage(successMessage);
+        setIsSubmitted(true); // Show the print button
+      } else {
+        setSubmissionStatus("error");
+        setSubmissionMessage(errorMessages.serverError);
+      }
+
       console.log("API Response:", response.data); // Debug log
-      alert("Form submitted successfully!"); // Success message
+      //alert("Form submitted successfully!"); // Success message
     } catch (error) {
+      setSubmissionStatus("error");
+      if (error.message === "Network Error") {
+        setSubmissionMessage(errorMessages.networkError);
+      } else {
+        setSubmissionMessage(errorMessages.unknownError);
+      }
       console.error("Error submitting form:", error); // Error log
-      alert("Failed to submit the form. Please try again."); // Failure message
+      //alert("Failed to submit the form. Please try again."); // Failure message
     } finally {
-      setIsSubmitted(true); // Show the "Download as PDF" button
       setIsSubmitting(false); // Hide spinner
     }
   };
@@ -1496,19 +1530,15 @@ export default function App() {
 
           {/*Founder President */}
           <div className={css["form-section"]}>
-            <h3>
-              (3) Founder President <RequiredField />
-            </h3>
+            <h3>(3) Founder President</h3>
 
             <div className={css["form-group"]}>
-              <h5>
-                Name <RequiredField />
-              </h5>
+              <h5>Name</h5>
               <input
                 type="text"
                 placeholder="Name"
                 {...register("founderPresidentName", {
-                  required: "Founder President Name is required",
+                  //required: "Founder President Name is required",
                   pattern: {
                     value: /^[A-Za-z\s]+$/,
                     message: "Please enter only alphabets",
@@ -1523,14 +1553,12 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>
-                Passport Size Photo <RequiredField />
-              </h5>
+              <h5>Passport Size Photo</h5>
               <input
                 type="file"
                 accept="image/*"
                 {...register("founderPresidentPhoto", {
-                  required: "Photo is required",
+                  //required: "Photo is required",
                 })}
                 onChange={(e) =>
                   handleImageFileChange(e, "founderPresidentPhoto")
@@ -1556,9 +1584,7 @@ export default function App() {
             )}
 
             <div className={css["form-group full-row"]}>
-              <h5>
-                Correspondence Address <RequiredField />
-              </h5>
+              <h5>Correspondence Address</h5>
               <textarea
                 type="text"
                 placeholder="Address"
@@ -1611,9 +1637,7 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>
-                Whatsapp/Mobile No. <RequiredField />
-              </h5>
+              <h5>Whatsapp/Mobile No.</h5>
               <div className={css["phone-input-container"]}>
                 <div className={css["phone-prefix"]}>+91</div>
                 <input
@@ -1621,7 +1645,7 @@ export default function App() {
                   className={css["phone-input"]}
                   placeholder="Enter 10 digit number"
                   {...registerField("founderPresidentWhatsapp", {
-                    required: "Whatsapp/Mobile No. is required",
+                    //required: "Whatsapp/Mobile No. is required",
                     isMobile: true,
                     pattern: validationPatterns.mobile,
                   })}
@@ -1635,9 +1659,7 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>
-                Addtional Mobile No. <RequiredField />
-              </h5>
+              <h5>Addtional Mobile No.</h5>
               <div className={css["phone-input-container"]}>
                 <div className={css["phone-prefix"]}>+91</div>
                 <input
@@ -1645,7 +1667,7 @@ export default function App() {
                   className={css["phone-input"]}
                   placeholder="Enter 10 digit number"
                   {...registerField("founderPresidentAddtionalMobile", {
-                    required: "Whatsapp/Mobile No. is required",
+                    //required: "Whatsapp/Mobile No. is required",
                     isMobile: true,
                     pattern: validationPatterns.mobile,
                   })}
@@ -1659,15 +1681,16 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
-              <h5>
-                Founder President's Birth Date
-                <RequiredField />
-              </h5>
+              <h5>Founder President's Birth Date</h5>
               <input
                 type="date"
                 {...register("founderPresidentBirthDate", {
-                  //required: "Birth Date is required",
+                  //required: false, // The field is not required
                   validate: (value) => {
+                    if (!value) {
+                      // If no value is selected, validation passes
+                      return true;
+                    }
                     const date = new Date(value);
                     const now = new Date();
                     return date < now || "Birth date cannot be in the future";
@@ -3677,57 +3700,6 @@ export default function App() {
               )}
             </div>
 
-            <div className={css["form-group full-row"]}>
-              <h5>Address</h5>
-              <textarea
-                type="text"
-                placeholder="Address"
-                {...register("committeemember1Address", {})}
-              />
-              {errors.committeemember1Address && (
-                <span className={css.error}>
-                  {errors.committeemember1Address.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Pin Code</h5>
-              <input
-                type="text"
-                placeholder="Pin Code"
-                {...register("committeemember1PinCode", {
-                  //required: "Pin Code is required",
-                  isMobile: true,
-                  pattern: validationPatterns.pincode,
-                })}
-              />
-              {errors.committeemember1PinCode && (
-                <span className={css.error}>
-                  {errors.committeemember1PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>E-Mail ID</h5>
-              <input
-                type="email"
-                placeholder="E-Mail"
-                {...register("committeemember1Email", {
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Invalid email address",
-                  },
-                })}
-              />
-              {errors.committeemember1Email && (
-                <span className={css.error}>
-                  {errors.committeemember1Email.message}
-                </span>
-              )}
-            </div>
-
             <div className={css["form-group"]}>
               <h5>Whatsapp/Mobile No.</h5>
               <div className={css["phone-input-container"]}>
@@ -3751,6 +3723,57 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
+              <h5>E-Mail ID</h5>
+              <input
+                type="email"
+                placeholder="E-Mail"
+                {...register("committeemember1Email", {
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Invalid email address",
+                  },
+                })}
+              />
+              {errors.committeemember1Email && (
+                <span className={css.error}>
+                  {errors.committeemember1Email.message}
+                </span>
+              )}
+            </div>
+
+            {/* <div className={css["form-group full-row"]}>
+              <h5>Address</h5>
+              <textarea
+                type="text"
+                placeholder="Address"
+                {...register("committeemember1Address", {})}
+              />
+              {errors.committeemember1Address && (
+                <span className={css.error}>
+                  {errors.committeemember1Address.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
+              <h5>Pin Code</h5>
+              <input
+                type="text"
+                placeholder="Pin Code"
+                {...register("committeemember1PinCode", {
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.pincode,
+                })}
+              />
+              {errors.committeemember1PinCode && (
+                <span className={css.error}>
+                  {errors.committeemember1PinCode.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
               <h5>Addtional Mobile No.</h5>
               <div className={css["phone-input-container"]}>
                 <div className={css["phone-prefix"]}>+91</div>
@@ -3770,7 +3793,7 @@ export default function App() {
                   {errors.committeemember1AddtionalMobile.message}
                 </span>
               )}
-            </div>
+            </div> */}
           </div>
 
           {/*Committee Member 2 */}
@@ -3792,57 +3815,6 @@ export default function App() {
               {errors.committeemember2Name && (
                 <span className={css.error}>
                   {errors.committeemember2Name.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group full-row"]}>
-              <h5>Address</h5>
-              <textarea
-                type="text"
-                placeholder="Address"
-                {...register("committeemember2Address", {})}
-              />
-              {errors.committeemember2Address && (
-                <span className={css.error}>
-                  {errors.committeemember2Address.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Pin Code</h5>
-              <input
-                type="text"
-                placeholder="Pin Code"
-                {...register("committeemember2PinCode", {
-                  //required: "Pin Code is required",
-                  isMobile: true,
-                  pattern: validationPatterns.pincode,
-                })}
-              />
-              {errors.committeemember2PinCode && (
-                <span className={css.error}>
-                  {errors.committeemember2PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>E-Mail ID</h5>
-              <input
-                type="email"
-                placeholder="E-Mail"
-                {...register("committeemember2Email", {
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Invalid email address",
-                  },
-                })}
-              />
-              {errors.committeemember2Email && (
-                <span className={css.error}>
-                  {errors.committeemember2Email.message}
                 </span>
               )}
             </div>
@@ -3870,6 +3842,57 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
+              <h5>E-Mail ID</h5>
+              <input
+                type="email"
+                placeholder="E-Mail"
+                {...register("committeemember2Email", {
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Invalid email address",
+                  },
+                })}
+              />
+              {errors.committeemember2Email && (
+                <span className={css.error}>
+                  {errors.committeemember2Email.message}
+                </span>
+              )}
+            </div>
+
+            {/* <div className={css["form-group full-row"]}>
+              <h5>Address</h5>
+              <textarea
+                type="text"
+                placeholder="Address"
+                {...register("committeemember2Address", {})}
+              />
+              {errors.committeemember2Address && (
+                <span className={css.error}>
+                  {errors.committeemember2Address.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
+              <h5>Pin Code</h5>
+              <input
+                type="text"
+                placeholder="Pin Code"
+                {...register("committeemember2PinCode", {
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.pincode,
+                })}
+              />
+              {errors.committeemember2PinCode && (
+                <span className={css.error}>
+                  {errors.committeemember2PinCode.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
               <h5>Addtional Mobile No.</h5>
               <div className={css["phone-input-container"]}>
                 <div className={css["phone-prefix"]}>+91</div>
@@ -3889,7 +3912,7 @@ export default function App() {
                   {errors.committeemember2AddtionalMobile.message}
                 </span>
               )}
-            </div>
+            </div> */}
           </div>
 
           {/*Committee Member 3 */}
@@ -3911,57 +3934,6 @@ export default function App() {
               {errors.committeemember3Name && (
                 <span className={css.error}>
                   {errors.committeemember3Name.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group full-row"]}>
-              <h5>Address</h5>
-              <textarea
-                type="text"
-                placeholder="Address"
-                {...register("committeemember3Address", {})}
-              />
-              {errors.committeemember3Address && (
-                <span className={css.error}>
-                  {errors.committeemember3Address.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Pin Code</h5>
-              <input
-                type="text"
-                placeholder="Pin Code"
-                {...register("committeemember3PinCode", {
-                  //required: "Pin Code is required",
-                  isMobile: true,
-                  pattern: validationPatterns.pincode,
-                })}
-              />
-              {errors.committeemember3PinCode && (
-                <span className={css.error}>
-                  {errors.committeemember3PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>E-Mail ID</h5>
-              <input
-                type="email"
-                placeholder="E-Mail"
-                {...register("committeemember3Email", {
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Invalid email address",
-                  },
-                })}
-              />
-              {errors.committeemember3Email && (
-                <span className={css.error}>
-                  {errors.committeemember3Email.message}
                 </span>
               )}
             </div>
@@ -3989,6 +3961,57 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
+              <h5>E-Mail ID</h5>
+              <input
+                type="email"
+                placeholder="E-Mail"
+                {...register("committeemember3Email", {
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Invalid email address",
+                  },
+                })}
+              />
+              {errors.committeemember3Email && (
+                <span className={css.error}>
+                  {errors.committeemember3Email.message}
+                </span>
+              )}
+            </div>
+
+            {/* <div className={css["form-group full-row"]}>
+              <h5>Address</h5>
+              <textarea
+                type="text"
+                placeholder="Address"
+                {...register("committeemember3Address", {})}
+              />
+              {errors.committeemember3Address && (
+                <span className={css.error}>
+                  {errors.committeemember3Address.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
+              <h5>Pin Code</h5>
+              <input
+                type="text"
+                placeholder="Pin Code"
+                {...register("committeemember3PinCode", {
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.pincode,
+                })}
+              />
+              {errors.committeemember3PinCode && (
+                <span className={css.error}>
+                  {errors.committeemember3PinCode.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
               <h5>Addtional Mobile No.</h5>
               <div className={css["phone-input-container"]}>
                 <div className={css["phone-prefix"]}>+91</div>
@@ -4008,7 +4031,7 @@ export default function App() {
                   {errors.committeemember3AddtionalMobile.message}
                 </span>
               )}
-            </div>
+            </div> */}
           </div>
 
           {/*Committee Member 4 */}
@@ -4030,57 +4053,6 @@ export default function App() {
               {errors.committeemember4Name && (
                 <span className={css.error}>
                   {errors.committeemember4Name.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group full-row"]}>
-              <h5>Address</h5>
-              <textarea
-                type="text"
-                placeholder="Address"
-                {...register("committeemember4Address", {})}
-              />
-              {errors.committeemember4Address && (
-                <span className={css.error}>
-                  {errors.committeemember4Address.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Pin Code</h5>
-              <input
-                type="text"
-                placeholder="Pin Code"
-                {...register("committeemember4PinCode", {
-                  //required: "Pin Code is required",
-                  isMobile: true,
-                  pattern: validationPatterns.pincode,
-                })}
-              />
-              {errors.committeemember4PinCode && (
-                <span className={css.error}>
-                  {errors.committeemember4PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>E-Mail ID</h5>
-              <input
-                type="email"
-                placeholder="E-Mail"
-                {...register("committeemember4Email", {
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Invalid email address",
-                  },
-                })}
-              />
-              {errors.committeemember4Email && (
-                <span className={css.error}>
-                  {errors.committeemember4Email.message}
                 </span>
               )}
             </div>
@@ -4108,6 +4080,57 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
+              <h5>E-Mail ID</h5>
+              <input
+                type="email"
+                placeholder="E-Mail"
+                {...register("committeemember4Email", {
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Invalid email address",
+                  },
+                })}
+              />
+              {errors.committeemember4Email && (
+                <span className={css.error}>
+                  {errors.committeemember4Email.message}
+                </span>
+              )}
+            </div>
+
+            {/* <div className={css["form-group full-row"]}>
+              <h5>Address</h5>
+              <textarea
+                type="text"
+                placeholder="Address"
+                {...register("committeemember4Address", {})}
+              />
+              {errors.committeemember4Address && (
+                <span className={css.error}>
+                  {errors.committeemember4Address.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
+              <h5>Pin Code</h5>
+              <input
+                type="text"
+                placeholder="Pin Code"
+                {...register("committeemember4PinCode", {
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.pincode,
+                })}
+              />
+              {errors.committeemember4PinCode && (
+                <span className={css.error}>
+                  {errors.committeemember4PinCode.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
               <h5>Addtional Mobile No.</h5>
               <div className={css["phone-input-container"]}>
                 <div className={css["phone-prefix"]}>+91</div>
@@ -4127,7 +4150,7 @@ export default function App() {
                   {errors.committeemember4AddtionalMobile.message}
                 </span>
               )}
-            </div>
+            </div> */}
           </div>
 
           {/*Committee Member 5 */}
@@ -4149,57 +4172,6 @@ export default function App() {
               {errors.committeemember5Name && (
                 <span className={css.error}>
                   {errors.committeemember5Name.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group full-row"]}>
-              <h5>Address</h5>
-              <textarea
-                type="text"
-                placeholder="Address"
-                {...register("committeemember5Address", {})}
-              />
-              {errors.committeemember5Address && (
-                <span className={css.error}>
-                  {errors.committeemember5Address.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Pin Code</h5>
-              <input
-                type="text"
-                placeholder="Pin Code"
-                {...register("committeemember5PinCode", {
-                  //required: "Pin Code is required",
-                  isMobile: true,
-                  pattern: validationPatterns.pincode,
-                })}
-              />
-              {errors.committeemember5PinCode && (
-                <span className={css.error}>
-                  {errors.committeemember5PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>E-MailI ID</h5>
-              <input
-                type="email"
-                placeholder="E-Mail"
-                {...register("committeemember5Email", {
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Invalid email address",
-                  },
-                })}
-              />
-              {errors.committeemember5Email && (
-                <span className={css.error}>
-                  {errors.committeemember5Email.message}
                 </span>
               )}
             </div>
@@ -4227,6 +4199,57 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
+              <h5>E-MailI ID</h5>
+              <input
+                type="email"
+                placeholder="E-Mail"
+                {...register("committeemember5Email", {
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Invalid email address",
+                  },
+                })}
+              />
+              {errors.committeemember5Email && (
+                <span className={css.error}>
+                  {errors.committeemember5Email.message}
+                </span>
+              )}
+            </div>
+
+            {/* <div className={css["form-group full-row"]}>
+              <h5>Address</h5>
+              <textarea
+                type="text"
+                placeholder="Address"
+                {...register("committeemember5Address", {})}
+              />
+              {errors.committeemember5Address && (
+                <span className={css.error}>
+                  {errors.committeemember5Address.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
+              <h5>Pin Code</h5>
+              <input
+                type="text"
+                placeholder="Pin Code"
+                {...register("committeemember5PinCode", {
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.pincode,
+                })}
+              />
+              {errors.committeemember5PinCode && (
+                <span className={css.error}>
+                  {errors.committeemember5PinCode.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
               <h5>Addtional Mobile No.</h5>
               <div className={css["phone-input-container"]}>
                 <div className={css["phone-prefix"]}>+91</div>
@@ -4246,7 +4269,7 @@ export default function App() {
                   {errors.committeemember5AddtionalMobile.message}
                 </span>
               )}
-            </div>
+            </div> */}
           </div>
 
           {/*Committee Member 6 */}
@@ -4268,57 +4291,6 @@ export default function App() {
               {errors.committeemember6Name && (
                 <span className={css.error}>
                   {errors.committeemember6Name.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group full-row"]}>
-              <h5>Address</h5>
-              <textarea
-                type="text"
-                placeholder="Address"
-                {...register("committeemember6Address", {})}
-              />
-              {errors.committeemember6Address && (
-                <span className={css.error}>
-                  {errors.committeemember6Address.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Pin Code</h5>
-              <input
-                type="text"
-                placeholder="Pin Code"
-                {...register("committeemember6PinCode", {
-                  //required: "Pin Code is required",
-                  isMobile: true,
-                  pattern: validationPatterns.pincode,
-                })}
-              />
-              {errors.committeemember6PinCode && (
-                <span className={css.error}>
-                  {errors.committeemember6PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>E-Mail ID</h5>
-              <input
-                type="email"
-                placeholder="E-Mail"
-                {...register("committeemember6Email", {
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Invalid email address",
-                  },
-                })}
-              />
-              {errors.committeemember6Email && (
-                <span className={css.error}>
-                  {errors.committeemember6Email.message}
                 </span>
               )}
             </div>
@@ -4346,6 +4318,57 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
+              <h5>E-Mail ID</h5>
+              <input
+                type="email"
+                placeholder="E-Mail"
+                {...register("committeemember6Email", {
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Invalid email address",
+                  },
+                })}
+              />
+              {errors.committeemember6Email && (
+                <span className={css.error}>
+                  {errors.committeemember6Email.message}
+                </span>
+              )}
+            </div>
+
+            {/* <div className={css["form-group full-row"]}>
+              <h5>Address</h5>
+              <textarea
+                type="text"
+                placeholder="Address"
+                {...register("committeemember6Address", {})}
+              />
+              {errors.committeemember6Address && (
+                <span className={css.error}>
+                  {errors.committeemember6Address.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
+              <h5>Pin Code</h5>
+              <input
+                type="text"
+                placeholder="Pin Code"
+                {...register("committeemember6PinCode", {
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.pincode,
+                })}
+              />
+              {errors.committeemember6PinCode && (
+                <span className={css.error}>
+                  {errors.committeemember6PinCode.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
               <h5>Addtional Mobile No.</h5>
               <div className={css["phone-input-container"]}>
                 <div className={css["phone-prefix"]}>+91</div>
@@ -4365,7 +4388,7 @@ export default function App() {
                   {errors.committeemember6AddtionalMobile.message}
                 </span>
               )}
-            </div>
+            </div> */}
           </div>
 
           {/*Committee Member 7 */}
@@ -4387,57 +4410,6 @@ export default function App() {
               {errors.committeemember7Name && (
                 <span className={css.error}>
                   {errors.committeemember7Name.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group full-row"]}>
-              <h5>Address</h5>
-              <textarea
-                type="text"
-                placeholder="Address"
-                {...register("committeemember7Address", {})}
-              />
-              {errors.committeemember7Address && (
-                <span className={css.error}>
-                  {errors.committeemember7Address.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Pin Code</h5>
-              <input
-                type="text"
-                placeholder="Pin Code"
-                {...register("committeemember7PinCode", {
-                  //required: "Pin Code is required",
-                  isMobile: true,
-                  pattern: validationPatterns.pincode,
-                })}
-              />
-              {errors.committeemember7PinCode && (
-                <span className={css.error}>
-                  {errors.committeemember7PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>E-Mail ID</h5>
-              <input
-                type="email"
-                placeholder="E-Mail"
-                {...register("committeemember7Email", {
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Invalid email address",
-                  },
-                })}
-              />
-              {errors.committeemember7Email && (
-                <span className={css.error}>
-                  {errors.committeemember7Email.message}
                 </span>
               )}
             </div>
@@ -4465,6 +4437,57 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
+              <h5>E-Mail ID</h5>
+              <input
+                type="email"
+                placeholder="E-Mail"
+                {...register("committeemember7Email", {
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Invalid email address",
+                  },
+                })}
+              />
+              {errors.committeemember7Email && (
+                <span className={css.error}>
+                  {errors.committeemember7Email.message}
+                </span>
+              )}
+            </div>
+
+            {/* <div className={css["form-group full-row"]}>
+              <h5>Address</h5>
+              <textarea
+                type="text"
+                placeholder="Address"
+                {...register("committeemember7Address", {})}
+              />
+              {errors.committeemember7Address && (
+                <span className={css.error}>
+                  {errors.committeemember7Address.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
+              <h5>Pin Code</h5>
+              <input
+                type="text"
+                placeholder="Pin Code"
+                {...register("committeemember7PinCode", {
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.pincode,
+                })}
+              />
+              {errors.committeemember7PinCode && (
+                <span className={css.error}>
+                  {errors.committeemember7PinCode.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
               <h5>Addtional Mobile No.</h5>
               <div className={css["phone-input-container"]}>
                 <div className={css["phone-prefix"]}>+91</div>
@@ -4484,7 +4507,7 @@ export default function App() {
                   {errors.committeemember7AddtionalMobile.message}
                 </span>
               )}
-            </div>
+            </div> */}
           </div>
 
           {/*Committee Member 8 */}
@@ -4506,57 +4529,6 @@ export default function App() {
               {errors.committeemember8Name && (
                 <span className={css.error}>
                   {errors.committeemember8Name.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group full-row"]}>
-              <h5>Address</h5>
-              <textarea
-                type="text"
-                placeholder="Address"
-                {...register("committeemember8Address", {})}
-              />
-              {errors.committeemember8Address && (
-                <span className={css.error}>
-                  {errors.committeemember8Address.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>Pin Code</h5>
-              <input
-                type="text"
-                placeholder="Pin Code"
-                {...register("committeemember8PinCode", {
-                  //required: "Pin Code is required",
-                  isMobile: true,
-                  pattern: validationPatterns.pincode,
-                })}
-              />
-              {errors.committeemember8PinCode && (
-                <span className={css.error}>
-                  {errors.committeemember8PinCode.message}
-                </span>
-              )}
-            </div>
-
-            <div className={css["form-group"]}>
-              <h5>E-Mail ID</h5>
-              <input
-                type="email"
-                placeholder="E-Mail"
-                {...register("committeemember8Email", {
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Invalid email address",
-                  },
-                })}
-              />
-              {errors.committeemember8Email && (
-                <span className={css.error}>
-                  {errors.committeemember8Email.message}
                 </span>
               )}
             </div>
@@ -4584,6 +4556,57 @@ export default function App() {
             </div>
 
             <div className={css["form-group"]}>
+              <h5>E-Mail ID</h5>
+              <input
+                type="email"
+                placeholder="E-Mail"
+                {...register("committeemember8Email", {
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Invalid email address",
+                  },
+                })}
+              />
+              {errors.committeemember8Email && (
+                <span className={css.error}>
+                  {errors.committeemember8Email.message}
+                </span>
+              )}
+            </div>
+
+            {/* <div className={css["form-group full-row"]}>
+              <h5>Address</h5>
+              <textarea
+                type="text"
+                placeholder="Address"
+                {...register("committeemember8Address", {})}
+              />
+              {errors.committeemember8Address && (
+                <span className={css.error}>
+                  {errors.committeemember8Address.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
+              <h5>Pin Code</h5>
+              <input
+                type="text"
+                placeholder="Pin Code"
+                {...register("committeemember8PinCode", {
+                  //required: "Pin Code is required",
+                  isMobile: true,
+                  pattern: validationPatterns.pincode,
+                })}
+              />
+              {errors.committeemember8PinCode && (
+                <span className={css.error}>
+                  {errors.committeemember8PinCode.message}
+                </span>
+              )}
+            </div> */}
+
+            {/* <div className={css["form-group"]}>
               <h5>Addtional Mobile No.</h5>
               <div className={css["phone-input-container"]}>
                 <div className={css["phone-prefix"]}>+91</div>
@@ -4603,7 +4626,7 @@ export default function App() {
                   {errors.committeemember8AddtionalMobile.message}
                 </span>
               )}
-            </div>
+            </div> */}
           </div>
 
           {/* Submit Button */}
@@ -4623,7 +4646,19 @@ export default function App() {
           <div className={css.spinner}></div>
         </div>
       )}
-      {/* Print Button (Visible after submission) */}
+      {/* Submission Messages */}
+      {submissionStatus && (
+        <div
+          className={
+            submissionStatus === "success"
+              ? css.successMessage
+              : css.errorMessage
+          }
+        >
+          {submissionMessage}
+        </div>
+      )}
+      {/* Print Button */}
       <div className={css["print-div"]}>
         {isSubmitted && (
           <button
@@ -4635,6 +4670,18 @@ export default function App() {
           </button>
         )}
       </div>
+      {/* Print Button (Visible after submission) */}
+      {/* <div className={css["print-div"]}>
+        {isSubmitted && (
+          <button
+            onClick={handlePrint}
+            className={css["print-btn"]}
+            style={{ marginTop: "20px" }}
+          >
+            Print
+          </button>
+        )}
+      </div> */}
     </div>
   );
 }
