@@ -51,6 +51,22 @@ export default function FormA() {
   });
   const [isSubmitted, setIsSubmitted] = useState(false); // State to control PDF button visibility
   const [isSubmitting, setIsSubmitting] = useState(false); // State for showing spinner
+  const [submissionStatus, setSubmissionStatus] = useState(null); // "success" or "error"
+  const [submissionMessage, setSubmissionMessage] = useState("");
+
+  const successMessage = `
+    Thank you, Form "A" has been successfully submitted. 
+    We will shortly email you the PDF of the same form submitted.
+    For any queries or further details, please contact on +91-XXXXXXXXXX or email us at example@email.com.
+  `;
+
+  const errorMessages = {
+    networkError:
+      "Unable to connect to the server. Please check your internet connection and try again.",
+    serverError:
+      "There was a server error while processing your form. Please try again later.",
+    unknownError: "An unexpected error occurred. Please try again later.",
+  };
 
   // Watch form inputs for real-time updates
   const coupleMembers = watch("coupleMembers"); // Number of Couple Members
@@ -115,7 +131,7 @@ export default function FormA() {
       console.log("REGION:", result);
 
       if (result.body.success) {
-        setRegionSuggestions(result.body.data); // Populate suggestions list
+        setRegionSuggestions(result / body.data); // Populate suggestions list
         setShowRegionSuggestions(true); // Show the suggestions dropdown
       }
     } catch (error) {
@@ -508,6 +524,11 @@ export default function FormA() {
   }, [coupleMembers, singleMembers, previousDues, creditWithJSGIF]);
 
   const onSubmit = async (data) => {
+    setIsSubmitting(true);
+    setSubmissionStatus(null);
+    setSubmissionMessage("");
+    setIsSubmitted(false);
+
     console.log("Final Submitted Data: ", {
       ...data,
       previousDues: data.previousDues || 0,
@@ -522,32 +543,47 @@ export default function FormA() {
     });
 
     //api call to backend
-    const response = await axios.post(
-      `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/contributions`,
-      //`http://localhost:5000/api/contributions`,
-      {
-        ...data,
-        previousDues: data.previousDues || 0,
-        lessPaid: data.lessPaid || 0,
-        coupleContribution,
-        singleContribution,
-        currentDues,
-        grossTotal,
-        gstAmount,
-        grandTotal,
-        netPayable,
+    try {
+      const response = await axios.post(
+        `https://gorabptxn1.execute-api.us-east-2.amazonaws.com/dev/contributions`,
+        //`http://localhost:5000/api/contributions`,
+        {
+          ...data,
+          previousDues: data.previousDues || 0,
+          lessPaid: data.lessPaid || 0,
+          coupleContribution,
+          singleContribution,
+          currentDues,
+          grossTotal,
+          gstAmount,
+          grandTotal,
+          netPayable,
+        }
+      );
+      if (response.status === 200 || response.status === 201) {
+        setSubmissionStatus("success");
+        setSubmissionMessage(successMessage);
+        setIsSubmitted(true); // Show the print button
+      } else {
+        setSubmissionStatus("error");
+        setSubmissionMessage(errorMessages.serverError);
       }
-    );
+    } catch (error) {
+      setSubmissionStatus("error");
+      if (error.message === "Network Error") {
+        setSubmissionMessage(errorMessages.networkError);
+      } else {
+        setSubmissionMessage(errorMessages.unknownError);
+      }
+    } finally {
+      setIsSubmitting(false); // Hide the spinner
+    }
 
-    setIsSubmitting(true); // Show the spinner
-    console.log(response);
+    // setIsSubmitting(true); // Show the spinner
+    console.log("RESPONSE: ", response);
 
     // Simulate an API call delay
     await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    setIsSubmitted(true); // Show the "Download as PDF" button
-    setIsSubmitting(false); // Hide the spinner
-    alert("Form submitted successfully!");
   };
 
   //PDF
@@ -1108,6 +1144,19 @@ export default function FormA() {
           <div className={css.spinner}></div>
         </div>
       )}
+      {/* Submission Messages */}
+      {submissionStatus && (
+        <div
+          className={
+            submissionStatus === "success"
+              ? css.successMessage
+              : css.errorMessage
+          }
+        >
+          {submissionMessage}
+        </div>
+      )}
+      {/* Print Button */}
       <div className={css["print-div"]}>
         {isSubmitted && (
           <button
@@ -1119,6 +1168,17 @@ export default function FormA() {
           </button>
         )}
       </div>
+      {/* <div className={css["print-div"]}>
+        {isSubmitted && (
+          <button
+            onClick={handlePrint}
+            className={css["print-btn"]}
+            style={{ marginTop: "20px" }}
+          >
+            Print
+          </button>
+        )}
+      </div> */}
     </div>
   );
 }
