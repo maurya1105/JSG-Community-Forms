@@ -5,7 +5,6 @@ import FormA from "./components/formA";
 import FormB from "./components/formB";
 import FormADataTable from "./components/FormADataTable";
 import FormBDataTable from "./components/FormBDataTable";
-import Test from "./components/test";
 
 const App = () => {
   return (
